@@ -305,9 +305,9 @@ start_fold(TargetNode, Module, {Type, Opts}, ParentPid, SslOpts) ->
              exit({shutdown, {error, Reason}});
          throw:{be_quiet, Err, Reason} ->
              gen_fsm_compat:send_event(ParentPid, {handoff_error, Err, Reason});
-         Err:Reason ->
+         Err:Reason:Stacktrace ->
              ?log_fail("because of ~p:~p ~p",
-                       [Err, Reason, erlang:get_stacktrace()]),
+                       [Err, Reason, Stacktrace]),
              gen_fsm_compat:send_event(ParentPid, {handoff_error, Err, Reason})
      end.
 -else.
