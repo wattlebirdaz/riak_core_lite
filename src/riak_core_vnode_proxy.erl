@@ -74,7 +74,7 @@ init([Parent, RegName, Mod, Index]) ->
             true ->
                 Interval;
             false ->
-                lager:warning("Setting riak_core/vnode_check_interval to ~b",
+                logger:warning("Setting riak_core/vnode_check_interval to ~b",
                               [Threshold div 2]),
                 Threshold div 2
         end,
@@ -83,7 +83,7 @@ init([Parent, RegName, Mod, Index]) ->
             true ->
                 RequestInterval;
             false ->
-                lager:warning("Setting riak_core/vnode_check_request_interval "
+                logger:warning("Setting riak_core/vnode_check_request_interval "
                               "to ~b", [SafeInterval div 2]),
                 SafeInterval div 2
         end,
