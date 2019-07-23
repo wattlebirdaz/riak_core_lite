@@ -35,10 +35,6 @@
 %% Field debugging
 -export([get_tab/0]).
 
--ifdef(TEST).
--include_lib("eunit/include/eunit.hrl").
--endif.
-
 -record(idxrec, {key, idx, mod, pid, monref}).
 -record(monrec, {monref, key}).
 
@@ -526,6 +522,7 @@ maybe_ensure_vnodes_started(Ring) ->
             ok
     end.
 
+-ifndef('21.0').
 ensure_vnodes_started(Ring) ->
     spawn(fun() ->
                   try
@@ -535,6 +532,17 @@ ensure_vnodes_started(Ring) ->
                           lager:error("~p", [{T, R, erlang:get_stacktrace()}])
                   end
           end).
+-else.
+ensure_vnodes_started(Ring) ->
+    spawn(fun() ->
+                  try
+                      riak_core_ring_handler:ensure_vnodes_started(Ring)
+                  catch
+                      T:R:Stack ->
+                          lager:error("~p", [{T, R, Stack}])
+                  end
+          end).
+-endif.
 
 schedule_management_timer() ->
     ManagementTick = app_helper:get_env(riak_core,
