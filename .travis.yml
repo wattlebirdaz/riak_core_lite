@@ -1,11 +1,13 @@
 language: erlang
-notifications:
-  webhooks: http://basho-engbot.herokuapp.com/travis?key=72ce513a4a26166521f60f72511bfb905329db87
-  email: eng@basho.com
 otp_release:
-  - R16B
-  - R15B03
-  - R15B02
-  - R15B01
-  - R15B
-
+  - 21.2
+install:
+  - make
+  - ./rebar3 update
+script:
+  - make test
+  - make dialyzer
+notifications:
+  email: bieniusa@cs.uni-kl.de
+sudo: required
+dist: trusty
