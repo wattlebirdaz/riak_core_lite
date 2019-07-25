@@ -149,7 +149,7 @@ start_fold_(TargetNode, Module, Type, Opts, ParentPid, SslOpts, SrcNode, SrcPart
     Msg = <<?PT_MSG_OLDSYNC:8,ModBin/binary>>,
     ok = TcpMod:send(Socket, Msg),
 
-    AckSyncThreshold = app_helper:get_env(riak_core, handoff_acksync_threshold, 25),
+    AckSyncThreshold = application:get_env(riak_core, handoff_acksync_threshold, 25),
 
     %% Now that handoff_concurrency applies to both outbound and
     %% inbound conns there is a chance that the receiver may
@@ -295,7 +295,8 @@ start_fold(TargetNode, Module, {Type, Opts}, ParentPid, SslOpts) ->
              exit({shutdown, max_concurrency});
          exit:{shutdown, timeout} ->
              %% A receive timeout during handoff
-             riak_core_stat:update(handoff_timeouts),
+           %% STATS
+%%             riak_core_stat:update(handoff_timeouts),
              ?log_fail("because of TCP recv timeout", []),
              exit({shutdown, timeout});
          exit:{shutdown, {error, Reason}} ->
@@ -323,7 +324,8 @@ start_fold(TargetNode, Module, {Type, Opts}, ParentPid, SslOpts) ->
              exit({shutdown, max_concurrency});
          exit:{shutdown, timeout} ->
              %% A receive timeout during handoff
-             riak_core_stat:update(handoff_timeouts),
+           %% STATS
+%%             riak_core_stat:update(handoff_timeouts),
              ?log_fail("because of TCP recv timeout", []),
              exit({shutdown, timeout});
          exit:{shutdown, {error, Reason}} ->
@@ -340,7 +342,7 @@ start_fold(TargetNode, Module, {Type, Opts}, ParentPid, SslOpts) ->
      end.
 -endif.
 start_visit_item_timer() ->
-    Ival = case app_helper:get_env(riak_core, handoff_receive_timeout) of
+    Ival = case application:get_env(riak_core, handoff_receive_timeout, undefined) of
                TO when is_integer(TO) ->
                    erlang:max(1000, TO div 3);
                _ ->
@@ -430,7 +432,7 @@ visit_item2(K, V, Acc) ->
                                               item_queue_byte_size=ItemQueueByteSize2},
 
                             %% Unit size is bytes:
-                            HandoffBatchThreshold = app_helper:get_env(riak_core,
+                            HandoffBatchThreshold = application:get_env(riak_core,
                                                                        handoff_batch_threshold,
                                                                        1024*1024),
 
@@ -534,7 +536,7 @@ get_handoff_port(Node) when is_atom(Node) ->
     end.
 
 get_handoff_ssl_options() ->
-    case app_helper:get_env(riak_core, handoff_ssl_options, []) of
+    case application:get_env(riak_core, handoff_ssl_options, []) of
         [] ->
             [];
         Props ->
@@ -562,7 +564,7 @@ get_handoff_ssl_options() ->
     end.
 
 get_handoff_receive_timeout() ->
-    app_helper:get_env(riak_core, handoff_timeout, ?TCP_TIMEOUT).
+    application:get_env(riak_core, handoff_timeout, ?TCP_TIMEOUT).
 
 end_fold_time(StartFoldTime) ->
     EndFoldTime = os:timestamp(),
@@ -620,7 +622,7 @@ maybe_send_status(ModSrcTgt, Stats=#ho_stats{interval_end=IntervalEnd}) ->
     end.
 
 get_status_interval() ->
-    app_helper:get_env(riak_core, handoff_status_interval, ?STATUS_INTERVAL).
+    application:get_env(riak_core, handoff_status_interval, ?STATUS_INTERVAL).
 
 get_src_partition(Opts) ->
     proplists:get_value(src_partition, Opts).
