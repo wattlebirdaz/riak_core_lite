@@ -420,7 +420,7 @@ query_resource(Resource, Types) ->
                   ignore |
                   {stop, term()}.
 init([]) ->
-    lager:debug("Background Manager starting up."),
+    logger:debug("Background Manager starting up."),
     State = #state{info_table=?BG_INFO_ETS_TABLE,
                    entry_table=?BG_ENTRY_ETS_TABLE,
                    enabled=true,
@@ -603,7 +603,7 @@ do_handle_call_exception(Function, Args, State) ->
     try apply(Function, Args)
     catch
         Error ->
-            lager:error("Exception: ~p in function ~p", [Error, Function]),
+            logger:error("Exception: ~p in function ~p", [Error, Function]),
             {reply, Error, State}
     end.
 
@@ -922,13 +922,13 @@ do_query(Resource, Types) ->
 %%      setting is not false; defaults to true.
 -spec use_bg_mgr() -> boolean().
 use_bg_mgr() ->
-    app_helper:get_env(riak_core, use_background_manager, true).
+    application:get_env(riak_core, use_background_manager, true).
 
 %% @doc Return true iff both the global configuration switch is on (see @link use_bg_mgr/0)
 %%      the setting of the supplied Dependency/Key is not false. Defaults to true.
 -spec use_bg_mgr(atom(), atom()) -> boolean().
 use_bg_mgr(Dependency, Key) ->
-    use_bg_mgr() andalso app_helper:get_env(Dependency, Key, true).
+    use_bg_mgr() andalso application:get_env(Dependency, Key, true).
 
 maybe_create_ets() ->
     TableSpecs = [

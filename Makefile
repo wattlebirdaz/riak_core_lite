@@ -1,22 +1,34 @@
-.PHONY: compile rel cover test dialyzer
-REBAR=./rebar3
+PULSE_TESTS = worker_pool_pulse
 
-compile:
-	$(REBAR) compile
+.PHONY: deps test
 
-clean:
-	$(REBAR) clean
+all: compile
 
-cover: test
-	$(REBAR) cover
+compile: deps
+	./rebar3 compile
 
-test: compile
-	$(REBAR) as test do eunit
+clean: clean-test
+	./rebar3 clean
 
-dialyzer:
-	$(REBAR) dialyzer
 
-xref:
-	$(REBAR) xref
+distclean: clean
 
-check: test dialyzer xref
+clean-test:
+	rm -rf t1000
+	rm -rf t2000
+	rm -rf t1
+	rm -rf t2
+	rm -rf ring_manager_eunit/test.ring
+	rm -rf ring_manager_eunit
+	rm -rf nonode@nohost
+	rm -rf log.nonode@nohost
+	rm -rf data.nonode@nohost
+	rm -rf data
+
+# You should 'clean' before your first run of this target
+# so that deps get built with PULSE where needed.
+pulse:
+	./rebar3 compile -D PULSE
+	./rebar3 eunit -D PULSE skip_deps=true suite=$(PULSE_TESTS)
+
+include tools.mk

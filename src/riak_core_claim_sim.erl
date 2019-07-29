@@ -24,10 +24,20 @@
 %%
 -module(riak_core_claim_sim).
 
--compile(nowarn_export_all).
--compile(export_all).
-
+-export([help/0, run/1, add_choose_params/2, run_rebalance/4,
+         read_ringfile/1, setup_environment/1, dryrun/3, make_current/2,
+         make_prepared/3, make_postxfer/2, make_percmd/1, make_rebalance/2,
+         make_analysis/2, default_simopts/3, dryrun1/3, sim_node/1,
+         command/2, pretty_print/3, run_analysis/3, o/2, o/3,
+         commission/0, commission/1, commission/2, commission/3,
+         commission_tests_all/0
+        ]).
 -ifdef(TEST).
+-export([
+         commission_test_dir/6, commission_tests_first/0,
+         commission_tests_rest/0, commission_claims/0,
+         commission_test_no_longer_run_by_default/0
+        ]).
 -include_lib("eunit/include/eunit.hrl").
 -endif.
 
@@ -103,9 +113,9 @@ run(Opts) ->
     setup_environment(AppVars),
                
     Wants = proplists:get_value(wants, Opts, 
-                                app_helper:get_env(riak_core, wants_claim_fun)),
+                                application:get_env(riak_core, wants_claim_fun, undefined)),
     Choose = proplists:get_value(choose, 
-                                 Opts, app_helper:get_env(riak_core, choose_claim_fun)),
+                                 Opts, application:get_env(riak_core, choose_claim_fun, undefined)),
     
     Prepare = proplists:get_value(prepare, Opts, finish),
     Cmds = proplists:get_value(cmds, Opts, []),
@@ -113,7 +123,7 @@ run(Opts) ->
     Analysis = proplists:get_value(analysis, Opts, []),
     ReturnRing = proplists:get_value(return_ring, Opts, false),
     
-    TN0 = proplists:get_value(target_n_val, Opts, app_helper:get_env(riak_core, target_n_val)),
+    TN0 = proplists:get_value(target_n_val, Opts, application:get_env(riak_core, target_n_val, undefined)),
 
     {Ring, TN} = 
         case {Claimant, RingFile, RingArg} of
@@ -122,7 +132,7 @@ run(Opts) ->
                 {Ring0, TN0};
             {Claimant, undefined, undefined} ->
                 {ok, Ring0} = rpc:call(Claimant, riak_core_ring_manager, get_raw_ring, []),
-                ClaimantTN = rpc:call(Claimant, app_helper, get_env, [riak_core, target_n_val]),
+                ClaimantTN = rpc:call(Claimant, application, get_env, [riak_core, target_n_val, undefined]),
                 {Ring0, ClaimantTN};
             {undefined, RingFile, undefined} ->
                 Ring0 = riak_core_ring_manager:read_ringfile(RingFile),
@@ -435,7 +445,7 @@ commission(Base, Test, {Wants, Choose}) ->
                               riak_core_claim_util:ring_stats(Ring2, TN)
                           catch
                               _:Reason ->
-                                  lager:info("Ring stats failed - ~p\n", [Reason]),
+                                  logger:info("Ring stats failed - ~p\n", [Reason]),
                                   []
                           end,
                   io:format(SeqFh, "\"~w\",~p,~p,~p\n",
@@ -470,7 +480,7 @@ commission(Base, Test, {Wants, Choose}) ->
                               riak_core_claim_util:ring_stats(Ring2, TN)
                           catch
                               _:Reason ->
-                                  lager:info("Ring stats failed - ~p\n", [Reason]),
+                                  logger:info("Ring stats failed - ~p\n", [Reason]),
                                   []
                           end,
                   io:format(BulkFh, "\"~w\",~p,~p,~p\n",

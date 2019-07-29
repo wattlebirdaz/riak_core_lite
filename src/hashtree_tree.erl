@@ -119,11 +119,7 @@
 
 -export_type([tree/0, tree_node/0, handler_fun/1, remote_fun/0]).
 
--ifdef(namespaced_types).
 -type hashtree_gb_set() :: gb_sets:set().
--else.
--type hashtree_gb_set() :: gb_set().
--endif.
 
 -record(hashtree_tree, {
           %% the identifier for this tree. used as part of the ids
@@ -565,7 +561,7 @@ data_root(Opts) ->
     case proplists:get_value(data_dir, Opts) of
         undefined ->
             Base = "/tmp/hashtree_tree",
-            <<P:128/integer>> = riak_core_util:md5(term_to_binary(os:timestamp())),
+            <<P:128/integer>> = riak_core_util:md5(term_to_binary(erlang:monotonic_time())),
             filename:join(Base, riak_core_util:integer_to_list(P, 16));
         Root -> Root
     end.

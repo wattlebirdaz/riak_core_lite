@@ -2,7 +2,7 @@
 %%
 %% riak_core: Core Riak Application
 %%
-%% Copyright (c) 2007-2010 Basho Technologies, Inc.  All Rights Reserved.
+%% Copyright (c) 2007-2015 Basho Technologies, Inc.  All Rights Reserved.
 %%
 %% This file is provided to you under the Apache License,
 %% Version 2.0 (the "License"); you may not use this file
@@ -38,17 +38,14 @@
          terminate/2, code_change/3]).
 -export ([distribute_ring/1, send_ring/1, send_ring/2, remove_from_cluster/2,
           remove_from_cluster/3, random_gossip/1,
-          recursive_gossip/1, random_recursive_gossip/1, rejoin/2,
-          gossip_version/0, legacy_gossip/0, legacy_gossip/1,
-          any_legacy_gossip/2]).
+          recursive_gossip/1, random_recursive_gossip/1, rejoin/2
+]).
 
--include("riak_core_ring.hrl").
 
 %% Default gossip rate: allow at most 45 gossip messages every 10 seconds
 -define(DEFAULT_LIMIT, {45, 10000}).
 
--record(state, {gossip_versions,
-                gossip_tokens}).
+-record(state, {gossip_tokens}).
 
 %% ===================================================================
 %% Public API
@@ -79,19 +76,6 @@ stop() ->
 
 rejoin(Node, Ring) ->
     gen_server:cast({?MODULE, Node}, {rejoin, Ring}).
-
-legacy_gossip() ->
-    false.
-
-legacy_gossip(_Node) ->
-    false.
-
-%% @doc Determine if any of the `Nodes' are using legacy gossip by querying
-%%      each node's capability directly over RPC. The proper way to check
-%%      for legacy gossip is to use {@link legacy_gossip/1}. This function
-%%      is used to support staged clustering in `riak_core_claimant'.
-any_legacy_gossip(_Ring, _Nodes) ->
-    false.
 
 %% @doc Gossip state to a random node in the ring.
 random_gossip(Ring) ->
@@ -129,7 +113,7 @@ recursive_gossip(Ring) ->
 
 random_recursive_gossip(Ring) ->
     Active = riak_core_ring:active_members(Ring),
-    RNode = lists:nth(rand:uniform(length(Active)), Active),
+    RNode = lists:nth(riak_core_rand:uniform(length(Active)), Active),
     recursive_gossip(Ring, RNode).
 
 %% ===================================================================
@@ -139,84 +123,19 @@ random_recursive_gossip(Ring) ->
 %% @private
 init(_State) ->
     schedule_next_reset(),
-    {ok, Ring} = riak_core_ring_manager:get_raw_ring(),
-    {Tokens, _} = app_helper:get_env(riak_core, gossip_limit, ?DEFAULT_LIMIT),
-    State = update_known_versions(Ring,
-                                  #state{gossip_versions=orddict:new(),
-                                         gossip_tokens=Tokens}),
+    {Tokens, _} = application:get_env(riak_core, gossip_limit, ?DEFAULT_LIMIT),
+    State = #state{gossip_tokens = Tokens},
     {ok, State}.
 
 handle_call(_, _From, State) ->
     {reply, ok, State}.
-
-update_gossip_version(Ring) ->
-    CurrentVsn = riak_core_ring:get_member_meta(Ring, node(), gossip_vsn),
-    DesiredVsn = gossip_version(),
-    case CurrentVsn of
-        DesiredVsn ->
-            Ring;
-        _ ->
-            Ring2 = riak_core_ring:update_member_meta(node(), Ring, node(),
-                                                      gossip_vsn, DesiredVsn),
-            Ring2
-    end.
-
-check_legacy_gossip(_Ring, _State) ->
-    false.
-
-update_known_version(Node, {OtherRing, GVsns}) ->
-    case riak_core_ring:get_member_meta(OtherRing, Node, gossip_vsn) of
-        undefined ->
-            case riak_core_ring:owner_node(OtherRing) of
-                Node ->
-                    %% Ring owner defaults to legacy gossip if unspecified.
-                    {OtherRing, orddict:store(Node, ?LEGACY_RING_VSN, GVsns)};
-                _ ->
-                    {OtherRing, GVsns}
-            end;
-        GossipVsn ->
-            {OtherRing, orddict:store(Node, GossipVsn, GVsns)}
-    end.
-
-update_known_versions(OtherRing, State=#state{gossip_versions=GVsns}) ->
-    {_, GVsns2} = lists:foldl(fun update_known_version/2,
-                              {OtherRing, GVsns},
-                              riak_core_ring:all_members(OtherRing)),
-    State#state{gossip_versions=GVsns2}.
-
-gossip_version() ->
-    %% Now that we can safely assume all nodes support capabilities, this
-    %% should be replaced with a capability someday.
-    ?CURRENT_RING_VSN.
-
-rpc_gossip_version(Ring, Node) ->
-    GossipVsn = riak_core_ring:get_member_meta(Ring, Node, gossip_vsn),
-    case GossipVsn of
-        undefined ->
-            case riak_core_util:safe_rpc(Node, riak_core_gossip, gossip_version, [], 1000) of
-                {badrpc, _} ->
-                    ?LEGACY_RING_VSN;
-                Vsn ->
-                    Vsn
-            end;
-        _ ->
-            GossipVsn
-    end.
 
 %% @private
 handle_cast({send_ring_to, _Node}, State=#state{gossip_tokens=0}) ->
     %% Out of gossip tokens, ignore the send request
     {noreply, State};
 handle_cast({send_ring_to, Node}, State) ->
-    {ok, MyRing0} = riak_core_ring_manager:get_raw_ring(),
-    MyRing = update_gossip_version(MyRing0),
-    GossipVsn = case gossip_version() of
-                    ?LEGACY_RING_VSN ->
-                        ?LEGACY_RING_VSN;
-                    _ ->
-                        rpc_gossip_version(MyRing, Node)
-                end,
-    RingOut = riak_core_ring:downgrade(GossipVsn, MyRing),
+    {ok, RingOut} = riak_core_ring_manager:get_raw_ring(),
     riak_core_ring:check_tainted(RingOut,
                                  "Error: riak_core_gossip/send_ring_to :: "
                                  "Sending tainted ring over gossip"),
@@ -225,35 +144,20 @@ handle_cast({send_ring_to, Node}, State) ->
     {noreply, State#state{gossip_tokens=Tokens}};
 
 handle_cast({distribute_ring, Ring}, State) ->
-    RingOut = case check_legacy_gossip(Ring, State) of
-                  true ->
-                      riak_core_ring:downgrade(?LEGACY_RING_VSN, Ring);
-                  false ->
-                      Ring
-              end,
     Nodes = riak_core_ring:active_members(Ring),
-    riak_core_ring:check_tainted(RingOut,
+    riak_core_ring:check_tainted(Ring,
                                  "Error: riak_core_gossip/distribute_ring :: "
                                  "Sending tainted ring over gossip"),
-    gen_server:abcast(Nodes, ?MODULE, {reconcile_ring, RingOut}),
+    gen_server:abcast(Nodes, ?MODULE, {reconcile_ring, Ring}),
     {noreply, State};
 
-handle_cast({reconcile_ring, RingIn}, State) ->
-    OtherRing = riak_core_ring:upgrade(RingIn),
-    State2 = update_known_versions(OtherRing, State),
-    case check_legacy_gossip(RingIn, State2) of
-        true ->
-            LegacyRing = riak_core_ring:downgrade(?LEGACY_RING_VSN, OtherRing),
-            riak_core_gossip_legacy:handle_cast({reconcile_ring, LegacyRing},
-                                                State2),
-            {noreply, State2};
-        false ->
-            %% Compare the two rings, see if there is anything that
-            %% must be done to make them equal...
-            riak_core_stat:update(gossip_received),
-            riak_core_ring_manager:ring_trans(fun reconcile/2, [OtherRing]),
-            {noreply, State2}
-    end;
+handle_cast({reconcile_ring, OtherRing}, State) ->
+    %% Compare the two rings, see if there is anything that
+    %% must be done to make them equal...
+    %% STATS
+    % riak_core_stat:update(gossip_received),
+    riak_core_ring_manager:ring_trans(fun reconcile/2, [OtherRing]),
+    {noreply, State};
 
 handle_cast(gossip_ring, State) ->
     % Gossip the ring to some random other node...
@@ -262,19 +166,17 @@ handle_cast(gossip_ring, State) ->
     random_gossip(MyRing),
     {noreply, State};
 
-handle_cast({rejoin, RingIn}, State) ->
-    OtherRing = riak_core_ring:upgrade(RingIn),
+handle_cast({rejoin, OtherRing}, State) ->
     {ok, Ring} = riak_core_ring_manager:get_raw_ring(),
     SameCluster = (riak_core_ring:cluster_name(Ring) =:=
                        riak_core_ring:cluster_name(OtherRing)),
     case SameCluster of
         true ->
-            Legacy = check_legacy_gossip(Ring, State),
             OtherNode = riak_core_ring:owner_node(OtherRing),
-            case riak_core:join(Legacy, node(), OtherNode, true, true) of
+            case riak_core:join(node(), OtherNode, true, true) of
                 ok -> ok;
                 {error, Reason} ->
-                    lager:error("Could not rejoin cluster: ~p", [Reason]),
+                    logger:error("Could not rejoin cluster: ~p", [Reason]),
                     ok
             end,
             {noreply, State};
@@ -288,7 +190,7 @@ handle_cast(_, State) ->
 handle_info(reset_tokens, State) ->
     schedule_next_reset(),
     gen_server:cast(?MODULE, gossip_ring),
-    {Tokens, _} = app_helper:get_env(riak_core, gossip_limit, ?DEFAULT_LIMIT),
+    {Tokens, _} = application:get_env(riak_core, gossip_limit, ?DEFAULT_LIMIT),
     {noreply, State#state{gossip_tokens=Tokens}};
 
 handle_info(_Info, State) -> {noreply, State}.
@@ -307,12 +209,11 @@ code_change(_OldVsn, State, _Extra) ->
 %% ===================================================================
 
 schedule_next_reset() ->
-    {_, Reset} = app_helper:get_env(riak_core, gossip_limit, ?DEFAULT_LIMIT),
+    {_, Reset} = application:get_env(riak_core, gossip_limit, ?DEFAULT_LIMIT),
     erlang:send_after(Reset, ?MODULE, reset_tokens).
 
+%%noinspection ErlangUnboundVariable
 reconcile(Ring0, [OtherRing0]) ->
-    %% Due to rolling upgrades and legacy gossip, a ring's cluster name
-    %% may be temporarily undefined. This is eventually fixed by the claimant.
     {Ring, OtherRing} = riak_core_ring:reconcile_names(Ring0, OtherRing0),
     Node = node(),
     OtherNode = riak_core_ring:owner_node(OtherRing),
@@ -335,7 +236,8 @@ reconcile(Ring0, [OtherRing0]) ->
     case {WrongCluster, OtherStatus, Changed} of
         {true, _, _} ->
             %% TODO: Tell other node to stop gossiping to this node.
-            riak_core_stat:update(ignored_gossip),
+            %% STATS
+            % riak_core_stat:update(ignored_gossip),
             ignore;
         {_, down, _} ->
             %% Tell other node to rejoin the cluster.
@@ -348,7 +250,8 @@ reconcile(Ring0, [OtherRing0]) ->
             ignore;
         {_, _, new_ring} ->
             Ring3 = riak_core_ring:ring_changed(Node, Ring2),
-            riak_core_stat:update(rings_reconciled),
+            %% STATS
+            % riak_core_stat:update(rings_reconciled),
             log_membership_changes(Ring, Ring3),
             {reconciled_ring, Ring3};
         {_, _, _} ->
@@ -388,16 +291,16 @@ do_log_membership_changes([], [{NewNode, NewStatus}|New]) ->
     do_log_membership_changes([], New).
 
 log_node_changed(Node, Old, New) ->
-    lager:info("'~s' changed from '~s' to '~s'~n", [Node, Old, New]).
+    logger:info("'~s' changed from '~s' to '~s'~n", [Node, Old, New]).
 
 log_node_added(Node, New) ->
-    lager:info("'~s' joined cluster with status '~s'~n", [Node, New]).
+    logger:info("'~s' joined cluster with status '~s'~n", [Node, New]).
 
 log_node_removed(Node, Old) ->
-    lager:info("'~s' removed from cluster (previously: '~s')~n", [Node, Old]).
+    logger:info("'~s' removed from cluster (previously: '~s')~n", [Node, Old]).
 
 remove_from_cluster(Ring, ExitingNode) ->
-    remove_from_cluster(Ring, ExitingNode, rand:seed(exrop, os:timestamp())).
+    remove_from_cluster(Ring, ExitingNode, riak_core_rand:rand_seed()).
 
 remove_from_cluster(Ring, ExitingNode, Seed) ->
     % Get a list of indices owned by the ExitingNode...
@@ -426,7 +329,7 @@ remove_from_cluster(Ring, ExitingNode, Seed) ->
     ExitRing.
 
 attempt_simple_transfer(Seed, Ring, Owners, ExitingNode) ->
-    TargetN = app_helper:get_env(riak_core, target_n_val),
+    TargetN = application:get_env(riak_core, target_n_val, undefined),
     attempt_simple_transfer(Seed, Ring, Owners,
                             TargetN,
                             ExitingNode, 0,
@@ -454,7 +357,7 @@ attempt_simple_transfer(Seed, Ring, [{P, Exit}|Rest], TargetN, Exit, Idx, Last) 
                     target_n_fail;
                 Qualifiers ->
                     %% these nodes don't violate target_n forward
-                    {Rand, Seed2} = rand:uniform_s(length(Qualifiers), Seed),
+                    {Rand, Seed2} = riak_core_rand:uniform_s(length(Qualifiers), Seed),
                     Chosen = lists:nth(Rand, Qualifiers),
                     %% choose one, and do the rest of the ring
                     attempt_simple_transfer(

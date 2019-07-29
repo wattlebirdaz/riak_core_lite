@@ -34,8 +34,9 @@
 -ifdef(EQC).
 -include_lib("eqc/include/eqc.hrl").
 -include_lib("eqc/include/eqc_statem.hrl").
+-include_lib("eunit/include/eunit.hrl").
 
--compile([export_all, nowarn_export_all]).
+-compile(export_all).
 
 -type bucket_name() :: binary().
 -type orddict() :: orddict:orddict().
@@ -43,6 +44,9 @@
 -define(NAMES, [<<0>>, <<1>>, <<2>>, <<3>>]).
 -define(BPROP_KEYS, [foo, bar, tapas]).
 -define(DEFAULT_BPROPS, [{n_val, 3}]).
+-define(QC_OUT(P),
+    eqc:on_output(fun(Str, Args) -> io:format(user, Str, Args) end, P)).
+
 
 %%
 %% The state_m "Model".  This invariant represents what properties
@@ -51,6 +55,38 @@
 -record(state, {
     buckets = orddict:new() :: orddict()
 }).
+
+%%
+%% Eunit entrypoints
+%%
+
+bprops_test_() -> {
+        timeout, 60,
+        ?_test(?assert(
+            eqc:quickcheck(?QC_OUT(eqc:testing_time(50, prop_buckets())))))
+    }.
+
+%%
+%% top level drivers (for testing by hand, typically)
+%%
+
+run() ->
+    run(100).
+
+run(N) ->
+    eqc:quickcheck(eqc:numtests(N, prop_buckets())).
+
+rerun() ->
+    eqc:check(eqc_statem:show_states(prop_buckets())).
+
+cover() ->
+    cover(100).
+
+cover(N) ->
+    cover:compile_beam(riak_core_bucket),
+    eqc:quickcheck(eqc:numtests(N, prop_buckets())),
+    cover:analyse_to_file(riak_core_bucket, [html]).
+
 
 %%
 %% eqc_statem initial model
@@ -195,93 +231,26 @@ bucket_prop_value() ->
 %%
 
 prop_buckets() ->
-    ?SETUP(
-        fun setup_cleanup/0,
-        ?FORALL(Cmds, eqc_statem:commands(?MODULE),
-            aggregate(eqc_statem:command_names(Cmds),
-                ?TRAPEXIT(
-                    try
-                        %%
-                        %% setup
-                        %%
-                        os:cmd("rm -rf ./riak_core_bucket_eqc_meta"),
-                        application:set_env(riak_core, claimant_tick, 4294967295),
-                        application:set_env(riak_core, broadcast_lazy_timer, 4294967295),
-                        application:set_env(riak_core, broadcast_exchange_timer, 4294967295),
-                        application:set_env(riak_core, metadata_hashtree_timer, 4294967295),
-                        application:set_env(riak_core, default_bucket_props, ?DEFAULT_BPROPS),
-                        application:set_env(riak_core, cluster_name, "riak_core_bucket_eqc"),
-                        stop_pid(riak_core_ring_events, whereis(riak_core_ring_events)),
-                        stop_pid(riak_core_ring_manager, whereis(riak_core_ring_manager)),
-                        {ok, RingEvents} = riak_core_ring_events:start_link(),
-                        {ok, _RingMgr} = riak_core_ring_manager:start_link(test),
-                        {ok, Claimant} = riak_core_claimant:start_link(),
-                        {ok, MetaMgr} = riak_core_metadata_manager:start_link([{data_dir, "./riak_core_bucket_eqc_meta"}]),
-                        {ok, Hashtree} = riak_core_metadata_hashtree:start_link("./riak_core_bucket_eqc_meta/trees"),
-                        {ok, Broadcast} = riak_core_broadcast:start_link(),
-
-                        {H, S, Res} = eqc_statem:run_commands(?MODULE, Cmds),
-
-                        %%
-                        %% shut down
-                        %%
-                        stop_pid(riak_core_broadcast, Broadcast),
-                        stop_pid(riak_core_metadata_hashtree, Hashtree),
-                        stop_pid(riak_core_metadata_manager, MetaMgr),
-                        stop_pid(riak_core_claimant, Claimant),
-                        riak_core_ring_manager:stop(),
-                        stop_pid(riak_core_ring_events2, RingEvents),
-
-                        eqc_statem:pretty_commands(
-                            ?MODULE, Cmds,
-                            {H, S, Res},
-                            eqc:aggregate(
-                                eqc_statem:command_names(Cmds),
-                                Res == ok
-                            )
+    ?FORALL(Cmds, commands(?MODULE),
+        aggregate(command_names(Cmds),
+            ?TRAPEXIT(
+                begin
+                    {H, S, Res} =
+                    bucket_eqc_utils:per_test_setup(?DEFAULT_BPROPS,
+                                                    fun() ->
+                                                        run_commands(?MODULE, Cmds)
+                                                    end),
+                    pretty_commands(
+                        ?MODULE, Cmds,
+                        {H, S, Res},
+                        aggregate(
+                            command_names(Cmds),
+                            Res == ok
                         )
-                    after
-                        os:cmd("rm -rf ./riak_core_bucket_eqc_meta")
-                    end
-                )
+                    )
+                end
             )
         )
     ).
-
-setup_cleanup() ->
-    meck:new(riak_core_capability, []),
-    meck:expect(
-        riak_core_capability, get,
-        fun({riak_core, bucket_types}) -> true;
-            (X) -> meck:passthrough([X])
-        end
-    ),
-    fun() ->
-        meck:unload(riak_core_capability)
-    end.
-
-%%
-%% internal helper functions
-%%
-
-stop_pid(_Tag, Other) when not is_pid(Other) ->
-    ok;
-stop_pid(Tag, Pid) ->
-    unlink(Pid),
-    exit(Pid, shutdown),
-    ok = wait_for_pid(Tag, Pid).
-
-wait_for_pid(Tag, Pid) ->
-    Mref = erlang:monitor(process, Pid),
-    receive
-        {'DOWN', Mref, process, _, _} ->
-            ok
-    after
-        5000 ->
-            demonitor(Mref, [flush]),
-	    exit(Pid, kill),
-	    wait_for_pid(Tag, Pid)
-
-    end.
 
 -endif.

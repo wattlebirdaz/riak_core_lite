@@ -32,8 +32,8 @@
 -define(HARNESS, (rt:config(rt_harness))).
 
 %% JFW: hack until we can get this to play nicely with rebar:
-log_info(Message) -> lager:log(info, self(), Message).
-log_info(Message, Params) -> lager:log(info, self(), Message, Params).
+log_info(Message) -> logger:log(info, self(), Message).
+log_info(Message, Params) -> logger:log(info, self(), Message, Params).
 
 go() -> 
     go(1, {10000, 1000}).
@@ -158,7 +158,7 @@ seed_data({NEntries, Size}, SecondarySHA1) ->
 random_binary(0, Bin) ->
     Bin;
 random_binary(N, Bin) ->
-    X = rand:uniform(255),
+    X = random:uniform(255),
     random_binary(N-1, <<Bin/binary, X:8/integer>>).
 
 %% Directly "inject" a object w/ metadata, vtags, etc.: 

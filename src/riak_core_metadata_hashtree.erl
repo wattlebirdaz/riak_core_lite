@@ -65,7 +65,7 @@
 %% as the data root.
 -spec start_link() -> {ok, pid()} | ignore | {error, term()}.
 start_link() ->
-    PRoot = app_helper:get_env(riak_core, platform_data_dir),
+    PRoot = application:get_env(riak_core, platform_data_dir, undefined),
     DataRoot = filename:join(PRoot, "cluster_meta/trees"),
     start_link(DataRoot).
 
@@ -207,7 +207,7 @@ handle_info({'DOWN', BuildRef, process, _Pid, normal}, State=#state{built=BuildR
     State1 = build_done(State),
     {noreply, State1};
 handle_info({'DOWN', BuildRef, process, _Pid, Reason}, State=#state{built=BuildRef}) ->
-    lager:error("building tree failed: ~p", [Reason]),
+    logger:error("building tree failed: ~p", [Reason]),
     State1 = build_error(State),
     {noreply, State1};
 handle_info({'DOWN', LockRef, process, _Pid, _Reason}, State=#state{lock={_, LockRef}}) ->
@@ -363,5 +363,5 @@ prepare_pkey({FullPrefix, Key}) ->
 
 %% @private
 schedule_tick() ->
-    TickMs = app_helper:get_env(riak_core, metadata_hashtree_timer, 10000),
+    TickMs = application:get_env(riak_core, metadata_hashtree_timer, 10000),
     erlang:send_after(TickMs, ?MODULE, tick).

@@ -27,7 +27,7 @@
 -include_lib("eqc/include/eqc_statem.hrl").
 -include_lib("eunit/include/eunit.hrl").
 
--compile([export_all, nowarn_export_all]).
+-compile(export_all).
 
 -record(state, { up_nodes = [],
                  services = [],
@@ -40,48 +40,65 @@
 
 -define(ORDSET(L), ordsets:from_list(L)).
 
+qc_test_() ->
+    {timeout, 120, fun() -> ?assert(eqc:quickcheck(?QC_OUT(prop_main()))) end}.
+
 prop_main() ->
+    ?SETUP(
+        fun setup_cleanup/0,
+        ?FORALL(Cmds, commands(?MODULE),
+                begin
+                    %% Setup ETS table to recv broadcasts
+                    ets:new(?MODULE, [ordered_set, named_table, public]),
+                    ets:insert_new(?MODULE, {bcast_id, 0}),
+
+                    %% Start the watcher
+                    {ok, Pid} = riak_core_node_watcher:start_link(),
+
+                    %% Internal call to the node watcher to override default broadcast mechanism
+                    riak_core_node_watcher:set_broadcast_module(?MODULE, on_broadcast),
+
+                    %% Run the test
+                    {_H, _S, Res} = run_commands(?MODULE, Cmds),
+
+                    %% Unlink and kill our PID
+                    riak_core_test_util:stop_pid(Pid),
+
+                    %% Delete the ETS table
+                    ets:delete(?MODULE),
+
+                    case Res of
+                        ok -> ok;
+                        _  -> io:format(user, "QC result: ~p\n", [Res])
+                    end,
+                    aggregate(command_names(Cmds), Res == ok)
+                end)).
+
+setup_cleanup() ->
+    meck:unload(),
     %% Initialize necessary env settings
+    riak_core_test_util:stop_pid(whereis(riak_core_node_watcher)),
     application:load(riak_core),
     application:set_env(riak_core, gossip_interval, 250),
     application:set_env(riak_core, ring_creation_size, 8),
-
-    %% Start supporting processes
-    riak_core_eventhandler_sup:start_link(),
-    riak_core_ring_events:start_link(),
-    riak_core_node_watcher_events:start_link(),
-
-    %% meck used for health watch / threshold
+    RingEventHandlerSup = ensure_started(riak_core_eventhandler_sup),
+    RingEvents = ensure_started(riak_core_ring_events),
+    NodeWatcherEvents = ensure_started(riak_core_node_watcher_events),
     meck:new(mod_health, [non_strict, no_link]),
+    fun() ->
+        unlink(RingEventHandlerSup),
+        unlink(RingEvents),
+        unlink(NodeWatcherEvents),
+        riak_core_test_util:stop_pid(RingEventHandlerSup),
+        riak_core_test_util:stop_pid(RingEvents),
+        riak_core_test_util:stop_pid(NodeWatcherEvents)
+    end.
 
-    ?FORALL(Cmds, commands(?MODULE),
-            begin
-                %% Setup ETS table to recv broadcasts
-                ets:new(?MODULE, [ordered_set, named_table, public]),
-                ets:insert_new(?MODULE, {bcast_id, 0}),
-
-                %% Start the watcher
-                {ok, Pid} = riak_core_node_watcher:start_link(),
-
-                %% Internal call to the node watcher to override default broadcast mechanism
-                gen_server:call(riak_core_node_watcher, {set_bcast_mod, ?MODULE, on_broadcast}),
-
-                %% Run the test
-                {_H, _S, Res} = run_commands(?MODULE, Cmds),
-
-                %% Unlink and kill our PID
-                unlink(Pid),
-                kill_and_wait(Pid),
-
-                %% Delete the ETS table
-                ets:delete(?MODULE),
-
-                case Res of
-                    ok -> ok;
-                    _  -> io:format(user, "QC result: ~p\n", [Res])
-                end,
-                aggregate(command_names(Cmds), Res == ok)
-            end).
+ensure_started(Mod) ->
+    case Mod:start_link() of
+        {ok, Pid} -> Pid;
+        {error, {already_started, Pid}} -> Pid
+    end.
 
 
 %% ====================================================================
@@ -353,7 +370,7 @@ g_services() ->
     list(elements([s1, s2, s3, s4])).
 
 g_ring_nodes() ->
-    vector(app_helper:get_env(riak_core, ring_creation_size),
+    vector(application:get_env(riak_core, ring_creation_size, undefined),
            oneof([node(), 'n1@127.0.0.1', 'n2@127.0.0.1', 'n3@127.0.0.1'])).
 g_service_threshold() ->
     [g_service(), {nw_mecked_thresher, health_check, [oneof([true, false, kill, error])]}].
@@ -376,7 +393,7 @@ local_service_down(Service) ->
 local_service_kill(Service, State) ->
     Avsn0 = riak_core_node_watcher:avsn(),
     Pid = orddict:fetch(Service, State#state.service_pids),
-    kill_and_wait(Pid),
+    riak_core_test_util:stop_pid(Pid),
     wait_for_avsn(Avsn0).
 
 local_node_up() ->
@@ -579,15 +596,6 @@ broadcasts() ->
     ets:match_delete(?MODULE, {'_', '_', '_'}),
     Bcasts.
 
-
-kill_and_wait(Pid) ->
-    Mref = erlang:monitor(process, Pid),
-    exit(Pid, kill),
-    receive
-        {'DOWN', Mref, _, _, _} ->
-            ok
-    end.
-
 wait_for_avsn(Avsn0) ->
     case riak_core_node_watcher:avsn() of
         Avsn0 ->
@@ -605,7 +613,7 @@ service_loop() ->
     end.
 
 build_ring([Node | Rest]) ->
-    Inc = trunc(math:pow(2,160)-1) div app_helper:get_env(riak_core, ring_creation_size),
+    Inc = trunc(math:pow(2,160)-1) div application:get_env(riak_core, ring_creation_size, undefined),
     build_ring(Rest, 0, Inc, riak_core_ring:fresh(Node)).
 
 build_ring([], _Id, _Inc, R) ->
