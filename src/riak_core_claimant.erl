@@ -899,7 +899,7 @@ are_joining_nodes(CState) ->
 %% @private
 auto_joining_nodes(CState) ->
     Joining = riak_core_ring:members(CState, [joining]),
-    case application:get_env(riak_core, staged_joins, false) of
+    case application:get_env(riak_core, staged_joins, true) of
         false ->
             Joining;
         true ->
