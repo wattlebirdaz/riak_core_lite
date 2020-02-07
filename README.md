@@ -5,8 +5,8 @@ The 'antidote' version of riak core is a minimal and up-to-date version of riak 
 # Riak Core
 
 ![Language](https://img.shields.io/badge/language-erlang-blue.svg)
-![Release](https://img.shields.io/badge/release-R21-9cf.svg)
-![Build](https://img.shields.io/badge/build-rebar3%203.9.0-brightgreen.svg)
+![Release](https://img.shields.io/badge/release-R21+-9cf.svg)
+![Build](https://img.shields.io/badge/build-rebar3%203.13.0-brightgreen.svg)
 
 [![Build Status](https://travis-ci.com/albsch/riak_core.svg?branch=master)](https://travis-ci.com/albsch/riak_core.svg?branch=master)
 
