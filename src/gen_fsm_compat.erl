@@ -635,26 +635,49 @@ get_msg(Msg) -> Msg.
 %%-----------------------------------------------------------------
 %% Status information
 %%-----------------------------------------------------------------
+
+-if(?OTP_RELEASE >= 22).
 format_status(Opt, StatusData) ->
-    [PDict, SysState, Parent, Debug, [Name, StateName, StateData, Mod, _Time, _HibernateAfterTimeout]] =
-	StatusData,
-    Header = gen:format_status_header("Status for state machine",
-                                      Name),
+	[PDict, SysState, Parent, Debug, [Name, StateName, StateData, Mod, _Time, _HibernateAfterTimeout]] =
+		StatusData,
+	Header = gen:format_status_header("Status for state machine",
+		Name),
     Log = sys:get_log(Debug),
-    Specfic = format_status(Opt, Mod, PDict, StateData),
-    Specfic = case format_status(Opt, Mod, PDict, StateData) of
-		  S when is_list(S) -> S;
-		  S -> [S]
-	      end,
-    [{header, Header},
-     {data, [{"Status", SysState},
-	     {"Parent", Parent},
-	     {"Logged events", Log},
-	     {"StateName", StateName}]} |
-     Specfic].
+	Specfic = format_status(Opt, Mod, PDict, StateData),
+	Specfic = case format_status(Opt, Mod, PDict, StateData) of
+				  S when is_list(S) -> S;
+				  S -> [S]
+			  end,
+	[{header, Header},
+		{data, [{"Status", SysState},
+			{"Parent", Parent},
+			{"Logged events", Log},
+			{"StateName", StateName}]} |
+		Specfic].
+-elif(?OTP_RELEASE >= 21).
+format_status(Opt, StatusData) ->
+	[PDict, SysState, Parent, Debug, [Name, StateName, StateData, Mod, _Time, _HibernateAfterTimeout]] =
+		StatusData,
+	Header = gen:format_status_header("Status for state machine",
+		Name),
+%%    Log = sys:get_log(Debug),
+	Log = sys:get_debug(log, Debug, []),
+	Specfic = format_status(Opt, Mod, PDict, StateData),
+	Specfic = case format_status(Opt, Mod, PDict, StateData) of
+				  S when is_list(S) -> S;
+				  S -> [S]
+			  end,
+	[{header, Header},
+		{data, [{"Status", SysState},
+			{"Parent", Parent},
+			{"Logged events", Log},
+			{"StateName", StateName}]} |
+		Specfic].
+
+-endif.
 
 format_status(Opt, Mod, PDict, State) ->
-    DefStatus = case Opt of
+	DefStatus = case Opt of
 		    terminate -> State;
 		    _ -> [{data, [{"StateData", State}]}]
 		end,
