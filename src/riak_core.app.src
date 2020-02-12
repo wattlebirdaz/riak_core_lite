@@ -1,6 +1,6 @@
 {application,riak_core,
     [{description,"Riak Core Lite"},
-     {vsn,"1.0.0-rc1"},
+     {vsn,"0.9.0"},
      {modules,[]},
      {registered,[]},
      {included_applications,[syntax_tools, compiler]},
@@ -30,8 +30,9 @@
           {bucket_validators, []},
           {stat_mods, []},
           {health_checks, []}
-]},
-{pkg_name,"riak_core_lite"},
+     ]},
+     {pkg_name,"riak_core_lite"},
      {maintainers,["riak_core_lite","Albert Schimpf"]},
      {licenses,["Apache"]},
-     {links,[{"Github","https://github.com/riak-core-lite/riak_core_lite"}]}]}.
+     {links,[{"Github","https://github.com/riak-core-lite/riak_core_lite"}]}
+    ]}.
