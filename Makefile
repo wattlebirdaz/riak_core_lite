@@ -36,6 +36,9 @@ pulse:
 test: compile
 	${REBAR} eunit
 
+coverage: compile
+	${REBAR} cover --verbose
+
 docs:
 	${REBAR} doc
 

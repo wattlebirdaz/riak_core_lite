@@ -7,6 +7,8 @@ install:
   - ./rebar3 update
 script:
   - make test
+  - make coverage
+  - ./rebar3 as test coveralls send
   - make xref
   - make dialyzer
 sudo: required
