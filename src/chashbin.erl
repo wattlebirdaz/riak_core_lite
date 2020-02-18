@@ -29,10 +29,12 @@
 -export_type([chashbin/0]).
 
 %% 160 bits for hash, 16 bits for node id
--define(UNIT, 176).
--define(ENTRY, binary-unit:?UNIT).
+%% these macros break edoc
+%% also these macros are not used consistently, commenting out for now
+%%-define(UNIT, 176).
+%%-define(ENTRY, binary-unit:?UNIT).
 
--type owners_bin() :: <<_:_*?UNIT>>.
+-type owners_bin() :: <<_:_*176>>.
 -type index()      :: chash:index_as_int().
 -type pred_fun()   :: fun(({index(), node()}) -> boolean()).
 -type chash_key()  :: index() | chash:index().
@@ -146,7 +148,7 @@ iterator(HashKey, CHBin) ->
 %% @doc Return the `{Index, Owner}' pair pointed to by the iterator
 -spec itr_value(iterator()) -> {index(), node()}.
 itr_value(#iterator{pos=Pos, chbin=#chashbin{owners=Bin, nodes=Nodes}}) ->
-    <<_:Pos/binary-unit:?UNIT, Idx:160/integer, Id:16/integer, _/binary>> = Bin,
+    <<_:Pos/binary-unit:176, Idx:160/integer, Id:16/integer, _/binary>> = Bin,
     Owner = element(Id, Nodes),
     {Idx, Owner}.
 
@@ -169,13 +171,13 @@ itr_pop(N, Itr=#iterator{pos=Pos, chbin=CHBin}) ->
     #chashbin{size=Size, owners=Bin, nodes=Nodes} = CHBin,
     L =
         case Bin of
-            <<_:Pos/?ENTRY, Bin2:N/?ENTRY, _/binary>> ->
+            <<_:Pos/binary-unit:176, Bin2:N/binary-unit:176, _/binary>> ->
                 [{Idx, element(Id, Nodes)}
                  || <<Idx:160/integer, Id:16/integer>> <= Bin2];
             _ ->
                 Left = (N + Pos) - Size,
                 Skip = Pos - Left,
-                <<Bin3:Left/?ENTRY, _:Skip/?ENTRY, Bin2/binary>> = Bin,
+                <<Bin3:Left/binary-unit:176, _:Skip/binary-unit:176, Bin2/binary>> = Bin,
                 L1 = [{Idx, element(Id, Nodes)}
                       || <<Idx:160/integer, Id:16/integer>> <= Bin2],
                 L2 = [{Idx, element(Id, Nodes)}

@@ -40,7 +40,7 @@ coverage: compile
 	${REBAR} cover --verbose
 
 docs:
-	${REBAR} doc
+	${REBAR} edoc
 
 xref: compile
 	${REBAR} xref
