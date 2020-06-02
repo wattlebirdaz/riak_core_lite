@@ -87,6 +87,13 @@ cover(N) ->
     proper:quickcheck(proper:numtests(N, prop_buckets())),
     cover:analyse_to_file(riak_core_bucket, [html]).
 
+%%
+
+command(State) ->
+    oneof([
+        {call, ?MODULE, set_bucket, set_bucket_args(State)}
+        % TODO marcel ...
+    ]).
 
 %%
 %% eqc_statem initial model
