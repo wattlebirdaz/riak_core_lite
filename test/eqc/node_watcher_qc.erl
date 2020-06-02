@@ -21,10 +21,9 @@
 %% -------------------------------------------------------------------
 -module(node_watcher_qc).
 
--ifdef(EQC).
+-ifdef(PROPER).
 
--include_lib("eqc/include/eqc.hrl").
--include_lib("eqc/include/eqc_statem.hrl").
+-include_lib("proper/include/proper.hrl").
 -include_lib("eunit/include/eunit.hrl").
 
 -compile(export_all).
@@ -36,16 +35,16 @@
                  peers = []}).
 
 -define(QC_OUT(P),
-        eqc:on_output(fun(Str, Args) -> io:format(user, Str, Args) end, P)).
+        proper:on_output(fun(Str, Args) -> io:format(user, Str, Args) end, P)).
 
 -define(ORDSET(L), ordsets:from_list(L)).
 
 qc_test_() ->
-    {timeout, 120, fun() -> ?assert(eqc:quickcheck(?QC_OUT(prop_main()))) end}.
+    {timeout, 120, fun() -> ?assert(proper:quickcheck(?QC_OUT(prop_main()))) end}.
 
 prop_main() ->
-    ?SETUP(
-        fun setup_cleanup/0,
+    %?SETUP(
+    %    fun setup_cleanup/0,
         ?FORALL(Cmds, commands(?MODULE),
                 begin
                     %% Setup ETS table to recv broadcasts
@@ -72,7 +71,7 @@ prop_main() ->
                         _  -> io:format(user, "QC result: ~p\n", [Res])
                     end,
                     aggregate(command_names(Cmds), Res == ok)
-                end)).
+                end).%).
 
 setup_cleanup() ->
     meck:unload(),

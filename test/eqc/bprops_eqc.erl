@@ -31,9 +31,8 @@
 %%      More attention needs to be spent on these tests!
 %%
 
--ifdef(EQC).
--include_lib("eqc/include/eqc.hrl").
--include_lib("eqc/include/eqc_statem.hrl").
+-ifdef(PROPER).
+-include_lib("proper/include/proper.hrl").
 -include_lib("eunit/include/eunit.hrl").
 
 -compile(export_all).
@@ -45,7 +44,7 @@
 -define(BPROP_KEYS, [foo, bar, tapas]).
 -define(DEFAULT_BPROPS, [{n_val, 3}]).
 -define(QC_OUT(P),
-    eqc:on_output(fun(Str, Args) -> io:format(user, Str, Args) end, P)).
+   proper:on_output(fun(Str, Args) -> io:format(user, Str, Args) end, P)).
 
 
 %%
@@ -63,7 +62,8 @@
 bprops_test_() -> {
         timeout, 60,
         ?_test(?assert(
-            eqc:quickcheck(?QC_OUT(eqc:testing_time(50, prop_buckets())))))
+            %proper:quickcheck(?QC_OUT(proper:testing_time(50, prop_buckets())))))
+            proper:quickcheck(?QC_OUT(prop_buckets()))))
     }.
 
 %%
@@ -74,17 +74,17 @@ run() ->
     run(100).
 
 run(N) ->
-    eqc:quickcheck(eqc:numtests(N, prop_buckets())).
+    proper:quickcheck(proper:numtests(N, prop_buckets())).
 
 rerun() ->
-    eqc:check(eqc_statem:show_states(prop_buckets())).
+    proper:check(proper:show_states(prop_buckets())).
 
 cover() ->
     cover(100).
 
 cover(N) ->
     cover:compile_beam(riak_core_bucket),
-    eqc:quickcheck(eqc:numtests(N, prop_buckets())),
+    proper:quickcheck(proper:numtests(N, prop_buckets())),
     cover:analyse_to_file(riak_core_bucket, [html]).
 
 
@@ -92,7 +92,7 @@ cover(N) ->
 %% eqc_statem initial model
 %%
 
--spec initial_state() -> eqc_statem:symbolic_state().
+-spec initial_state() -> proper:symbolic_state().
 initial_state() ->
     #state{}.
 
@@ -161,14 +161,14 @@ get_bucket_post(#state{buckets=Buckets}, [Bucket], Res) ->
     BPropsFind = orddict:find(Bucket, Buckets),
     case {Res, BPropsFind} of
         {error, _} ->
-            eq(Res, error);
+            equals(Res, error);
         {_, {ok, BProps}} ->
-            eq(
+            equals(
                 orddict:from_list(Res),
                 orddict:from_list(BProps)
             );
         {_, error} ->
-            eq(
+            equals(
                 orddict:from_list(Res),
                 orddict:from_list(?DEFAULT_BPROPS ++ [{name, Bucket}])
             )
@@ -193,7 +193,7 @@ all_n_post(#state{buckets=Buckets}, [], Res) ->
         [],
         Buckets
     ) ++ [proplists:get_value(n_val, ?DEFAULT_BPROPS)],
-    eq(ordsets:from_list(Res), ordsets:from_list(AllNVals)).
+    equals(ordsets:from_list(Res), ordsets:from_list(AllNVals)).
 
 
 %% TODO Add more commands here
@@ -203,27 +203,27 @@ all_n_post(#state{buckets=Buckets}, [], Res) ->
 %%
 
 bucket_name() ->
-    eqc_gen:elements(?NAMES).
+    proper:elements(?NAMES).
 
 bucket_props() ->
-    eqc_gen:list(bucket_prop()).
+    proper:list(bucket_prop()).
 
 bucket_prop() ->
-    eqc_gen:oneof(
+    proper:oneof(
         [
-            {n_val, pos_integer()},
+            {n_val, proper:pos_integer()},
             {bucket_prop_name(), bucket_prop_value()}
         ]
     ).
 
-pos_integer() ->
-    ?LET(N, eqc_gen:nat(), N + 1).
+%pos_integer() ->
+%    ?LET(N, proper:nat(), N + 1).
 
 bucket_prop_name() ->
-    eqc_gen:elements(?BPROP_KEYS).
+    proper:elements(?BPROP_KEYS).
 
 bucket_prop_value() ->
-    eqc_gen:bool().
+    proper:bool().
 
 
 %%
@@ -240,14 +240,14 @@ prop_buckets() ->
                                                     fun() ->
                                                         run_commands(?MODULE, Cmds)
                                                     end),
-                    pretty_commands(
-                        ?MODULE, Cmds,
-                        {H, S, Res},
+                    % pretty_commands(
+                    %     ?MODULE, Cmds,
+                    %     {H, S, Res},
                         aggregate(
                             command_names(Cmds),
                             Res == ok
                         )
-                    )
+                    % )
                 end
             )
         )

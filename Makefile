@@ -32,7 +32,13 @@ clean-test:
 pulse:
 	${REBAR} compile -D PULSE
 	${REBAR} eunit -D PULSE skip_deps=true suite=$(PULSE_TESTS)
+	
+proper:
+	${REBAR} as proper do eunit 
 
+epc:
+	${REBAR} as epc eunit
+	
 test: compile
 	${REBAR} eunit
 
@@ -40,7 +46,7 @@ coverage: compile
 	${REBAR} cover --verbose
 
 docs:
-	${REBAR} edoc
+	${REBAR} doc
 
 xref: compile
 	${REBAR} xref

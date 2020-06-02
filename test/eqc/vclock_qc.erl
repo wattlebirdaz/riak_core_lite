@@ -1,30 +1,30 @@
 -module(vclock_qc).
 
--ifdef(EQC).
-
--include_lib("eqc/include/eqc.hrl").
--include_lib("eqc/include/eqc_statem.hrl").
+-ifdef(PROPER).
+-include_lib("proper/include/proper.hrl").
 -include_lib("eunit/include/eunit.hrl").
 -compile(export_all).
 
 -define(ACTOR_IDS, [a,b,c,d,e]).
 -define(QC_OUT(P),
-        eqc:on_output(fun(Str, Args) -> io:format(user, Str, Args) end, P)).
+        proper:on_output(fun(Str, Args) -> io:format(user, Str, Args) end, P)).
 
 -record(state, {vclocks = []}).
 
 -define(TEST_TIME, 20).
 
-eqc_test_() ->
+proper_test_() ->
     {timeout,
-     60,
-     ?_assert(quickcheck(eqc:testing_time(?TEST_TIME, more_commands(10,?QC_OUT(prop_vclock())))))}.
-
+    60,
+    %?_assert(proper:quickcheck(testing_time(?TEST_TIME, more_commands(10,prop_vclock()))))}.
+    ?_assert(proper:quickcheck(more_commands(10,prop_vclock())))}.
 test() ->
-    quickcheck(eqc:testing_time(?TEST_TIME, more_commands(10, prop_vclock()))).
+    %proper:quickcheck(testing_time(?TEST_TIME, more_commands(10, prop_vclock()))).
+    proper:quickcheck(more_commands(10, prop_vclock())).
 
 test(Time) ->
-    quickcheck(eqc:testing_time(Time, more_commands(10, prop_vclock()))).
+    %proper:quickcheck(testing_time(Time, more_commands(10, prop_vclock()))).
+    proper:quickcheck(more_commands(10, prop_vclock())).
 
 
 %% Initialize the state
@@ -99,12 +99,16 @@ postcondition(_S, _C, _Res) ->
 prop_vclock() ->
     ?FORALL(Cmds,commands(?MODULE),
             begin
-                put(timestamp, 1),
-                {H,S,Res} = run_commands(?MODULE,Cmds),
-                aggregate([ length(V) || {_,V} <- S#state.vclocks ],
-                aggregate(command_names(Cmds),
-                          collect({num_vclocks_div_10, length(S#state.vclocks) div 10},
-                                  pretty_commands(?MODULE,Cmds, {H,S,Res}, Res == ok))))
+                put(timestamp,1),
+                {_H, _S, Res} = run_commands(?MODULE, Cmds),
+                aggregate(command_names(Cmds), Res == ok)
+                %put(timestamp, 1),
+                %{H,S,Res} = run_commands(?MODULE, Cmds),
+                %aggregate([ length(V) || {_,V} <- S#state.vclocks],
+                %aggregate(command_names(Cmds),
+                %          collect({num_vclocks_div_10, length(S#state.vclocks) div 10},
+                %                  pretty_commands(?MODULE, Cmds, {H,S,Res}, Res == ok) %maybe not supported in proper
+                %                  )))
             end).
 
 gen_actor_id() ->
