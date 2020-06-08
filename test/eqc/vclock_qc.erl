@@ -18,12 +18,8 @@ proper_test_() ->
     10000,
     ?_assert(proper:quickcheck(prop_vclock(), [{numtests, 10000}]))}.
 test() ->
-    %proper:quickcheck(testing_time(?TEST_TIME, more_commands(10, prop_vclock()))).
     proper:quickcheck(more_commands(10, prop_vclock())).
 
-% test(Time) ->
-%     %proper:quickcheck(testing_time(Time, more_commands(10, prop_vclock()))).
-%     proper:quickcheck(more_commands(10, prop_vclock())).
 
 
 %% Initialize the state
