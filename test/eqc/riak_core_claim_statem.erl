@@ -15,6 +15,9 @@
 
 -compile(export_all).
 
+%Entry EUNIT
+claimStatem_test()->
+    ?_assert(proper:quickcheck(prop_claim(initial_state_data()))).
 
 %% -- State ------------------------------------------------------------------
 -record(state,
@@ -215,12 +218,13 @@ prop_claim(InitialState) ->
     ?FORALL(Cmds, commands(?MODULE, {starting, InitialState}),
             begin
                 {H, {_FinalStateName, S}, Res} = run_commands(?MODULE, Cmds),
-                Ring = S#state.ring%,
-                %pretty_commands(?MODULE, Cmds, {H, S, Res},
-                %                aggregate(command_names(Cmds),
-                %                          measure(ring_size, ring_size(Ring),
-                %                                  measure(node_count, node_count(Ring),
-                %                                          Res == ok))))
+                Ring = S#state.ring,
+                %pretty_commands(?MODULE, Cmds, 
+                                %{H, S, Res},
+                               aggregate(command_names(Cmds),
+                                         measure(ring_size, ring_size(Ring),
+                                                 measure(node_count, node_count(Ring),
+                                                         Res == ok)))%)
             end).
 
 ring_size(undefined) ->

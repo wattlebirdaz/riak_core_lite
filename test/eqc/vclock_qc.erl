@@ -14,17 +14,17 @@
 -define(TEST_TIME, 20).
 
 proper_test_() ->
-    {timeout,
-    60,
+    %{timeout,
+    %60,
     %?_assert(proper:quickcheck(testing_time(?TEST_TIME, more_commands(10,prop_vclock()))))}.
-    ?_assert(proper:quickcheck(prop_vclock(), [{numtests, 10000}, {spec_timeout, 1}]))}.
+    ?_assert(proper:quickcheck(prop_vclock(), [{numtests, 100}])).%}.
 test() ->
     %proper:quickcheck(testing_time(?TEST_TIME, more_commands(10, prop_vclock()))).
     proper:quickcheck(more_commands(10, prop_vclock())).
 
-test(Time) ->
-    %proper:quickcheck(testing_time(Time, more_commands(10, prop_vclock()))).
-    proper:quickcheck(more_commands(10, prop_vclock())).
+% test(Time) ->
+%     %proper:quickcheck(testing_time(Time, more_commands(10, prop_vclock()))).
+%     proper:quickcheck(more_commands(10, prop_vclock())).
 
 
 %% Initialize the state
@@ -99,16 +99,14 @@ postcondition(_S, _C, _Res) ->
 prop_vclock() ->
     ?FORALL(Cmds,commands(?MODULE),
             begin
-                put(timestamp,1),
-                {_H, _S, Res} = run_commands(?MODULE, Cmds),
-                aggregate(command_names(Cmds), Res == ok)
-                %put(timestamp, 1),
-                %{H,S,Res} = run_commands(?MODULE, Cmds),
-                %aggregate([ length(V) || {_,V} <- S#state.vclocks],
-                %aggregate(command_names(Cmds),
-                %          collect({num_vclocks_div_10, length(S#state.vclocks) div 10},
-                %                  pretty_commands(?MODULE, Cmds, {H,S,Res}, Res == ok) %maybe not supported in proper
-                %                  )))
+                put(timestamp, 1),
+                {H,S,Res} = run_commands(?MODULE, Cmds),
+                aggregate([ length(V) || {_,V} <- S#state.vclocks],
+                aggregate(command_names(Cmds),
+                          collect({num_vclocks_div_10, length(S#state.vclocks) div 10},
+                                  %pretty_commands(?MODULE, Cmds, {H,S,Res}, 
+                                  Res == ok%) %maybe not supported in proper
+                                  )))
             end).
 
 gen_actor_id() ->

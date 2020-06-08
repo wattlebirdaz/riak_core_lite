@@ -59,12 +59,13 @@
 %% Eunit entrypoints
 %%
 
-bprops_test_() -> {
-        timeout, 60,
-        ?_test(?assert(
+bprops_test_() -> %{
+        %timeout, 60,
+        %?_test(?assert(
             %proper:quickcheck(?QC_OUT(proper:testing_time(50, prop_buckets())))))
-            proper:quickcheck(?QC_OUT(prop_buckets()))))
-    }.
+            %proper:quickcheck(?QC_OUT(prop_buckets()), [{numtests, 100}])))
+        ?_assert(proper:quickcheck(?QC_OUT(prop_buckets()), [{numtests, 100}])).
+    %}.
 
 %%
 %% top level drivers (for testing by hand, typically)
@@ -88,11 +89,20 @@ cover(N) ->
     cover:analyse_to_file(riak_core_bucket, [html]).
 
 %%
-
+%TODO
 command(State) ->
-    oneof([
-        {call, ?MODULE, set_bucket, set_bucket_args(State)}
-        % TODO marcel ...
+    oneof([{call, ?MODULE, set_bucket, set_bucket_args(State)},
+           {call, ?MODULE, get_bucket, get_bucket_args(State)}
+          %[{call, ?MODULE,append_bucket_defaults/1}] 
+          %[{call, ?MODULE,get_bucket/2}] ++
+          %[{call, ?MODULE,reset_bucket/1}] ++
+          %[{call, ?MODULE,get_buckets/1}] ++
+          %[{call, ?MODULE,bucket_nval_map/1}] ++
+          %[{call, ?MODULE,default_object_navl,[]}] ++
+          %[{call, ?MODULE,merge_props/2}] ++
+          %[{call, ?MODULE,name/1}] ++
+          %[{call, ?MODULE,nval/1}] ++
+          %[{call, ?MODULE,get_vault/2}]
     ]).
 
 %%
@@ -113,21 +123,8 @@ set_bucket_args(_S) ->
 set_bucket(Bucket, BProps) ->
     riak_core_bucket:set_bucket(Bucket, BProps).
 
-set_bucket_post(#state{buckets=Buckets}, [Bucket, _BProps], Res) ->
-    case {Res, orddict:find(Bucket, Buckets)} of
-        %% first time bucket has been set
-        {ok, error} ->
-            true;
-        %% bucket has been set before
-        {ok, {ok, _OldBProps}} ->
-            true;
-        %% anything other than ok is a failure
-        %% TODO revisit, e.g., generate invalid inputs to force an error
-        _ ->
-            false
-    end.
-
-set_bucket_next(#state{buckets=Buckets} = S, _Res, [Bucket, BProps]) ->
+next_state(#state{buckets=Buckets} = S,{call,?MODULE, set_bucket, [Bucket, BProps]}) ->
+%set_bucket_next(#state{buckets=Buckets} = S, _Res, [Bucket, BProps])
     %%
     %% Get any previously defined properties from the model
     %%
@@ -164,7 +161,8 @@ get_bucket_args(_S) ->
 get_bucket(Bucket) ->
     riak_core_bucket:get_bucket(Bucket).
 
-get_bucket_post(#state{buckets=Buckets}, [Bucket], Res) ->
+%get_bucket_post(#state{buckets=Buckets}, [Bucket], Res)
+postcondition(#state{buckets=Buckets},{call,?MODULE,get_bucket, [Bucket]}, Res) ->
     BPropsFind = orddict:find(Bucket, Buckets),
     case {Res, BPropsFind} of
         {error, _} ->
@@ -179,6 +177,20 @@ get_bucket_post(#state{buckets=Buckets}, [Bucket], Res) ->
                 orddict:from_list(Res),
                 orddict:from_list(?DEFAULT_BPROPS ++ [{name, Bucket}])
             )
+    end;
+postcondition(#state{buckets=Buckets},{call,?MODULE, set_bucket, [Bucket, _BProps]}, Res) ->
+%set_bucket_post(#state{buckets=Buckets}, [Bucket, _BProps], Res)
+    case {Res, orddict:find(Bucket, Buckets)} of
+        %% first time bucket has been set
+        {ok, error} ->
+            true;
+        %% bucket has been set before
+        {ok, {ok, _OldBProps}} ->
+            true;
+        %% anything other than ok is a failure
+        %% TODO revisit, e.g., generate invalid inputs to force an error
+        _ ->
+            false
     end.
 
 %%
@@ -192,6 +204,7 @@ all_n() ->
     riak_core_bucket:all_n(Ring).
 
 all_n_post(#state{buckets=Buckets}, [], Res) ->
+%postcondition(#state{buckets=Buckets}, [], Res) ->
     AllNVals = orddict:fold(
         fun(_Bucket, BProps, Accum) ->
             {ok, NVal} = orddict:find(n_val, BProps),
@@ -216,15 +229,15 @@ bucket_props() ->
     proper:list(bucket_prop()).
 
 bucket_prop() ->
-    proper:oneof(
+    oneof(
         [
-            {n_val, proper:pos_integer()},
+            {n_val, pos_int()},
             {bucket_prop_name(), bucket_prop_value()}
         ]
     ).
 
-%pos_integer() ->
-%    ?LET(N, proper:nat(), N + 1).
+pos_int() ->
+    ?LET(N, proper:nat(), N + 1).
 
 bucket_prop_name() ->
     proper:elements(?BPROP_KEYS).
