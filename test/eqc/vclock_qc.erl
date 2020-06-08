@@ -14,10 +14,9 @@
 -define(TEST_TIME, 20).
 
 proper_test_() ->
-    %{timeout,
-    %60,
-    %?_assert(proper:quickcheck(testing_time(?TEST_TIME, more_commands(10,prop_vclock()))))}.
-    ?_assert(proper:quickcheck(prop_vclock(), [{numtests, 100}])).%}.
+    {timeout,
+    10000,
+    ?_assert(proper:quickcheck(prop_vclock(), [{numtests, 10000}]))}.
 test() ->
     %proper:quickcheck(testing_time(?TEST_TIME, more_commands(10, prop_vclock()))).
     proper:quickcheck(more_commands(10, prop_vclock())).

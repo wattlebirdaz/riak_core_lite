@@ -40,9 +40,8 @@
 -define(ORDSET(L), ordsets:from_list(L)).
 
 qc_test_() ->
-    %{timeout, 100, fun() -> 
-    %?assert(proper:quickcheck(prop_main(),[{numtests, 10}])) end}.
-    ?_assert(proper:quickcheck(prop_main(),[{numtests, 10}])).
+    {timeout, 10000,
+    ?_assert(proper:quickcheck(prop_main(),[{numtests, 10000}]))}.
 
 prop_main() ->
     ?SETUP(
@@ -103,7 +102,7 @@ ensure_started(Mod) ->
 
 
 %% ====================================================================
-%% eqc_statem callbacks
+%%proper_statem callbacks
 %% ====================================================================
 
 initial_state() ->

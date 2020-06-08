@@ -15,9 +15,10 @@
 
 -compile(export_all).
 
-%Entry EUNIT
+%Entry Eunit
 claimStatem_test()->
-    ?_assert(proper:quickcheck(prop_claim(initial_state_data()))).
+    {timeout, 10000,
+        ?_assert(proper:quickcheck(prop_claim(initial_state_data()),[{numtests, 10000}]))}.
 
 %% -- State ------------------------------------------------------------------
 -record(state,
@@ -208,9 +209,6 @@ claim_post(_From, _To, _S, [_Ring], NewRing) ->
 %% -- Property ---------------------------------------------------------------
 %% @doc <i>Optional callback</i>, Invariant, checked for each visited state
 %%      during test execution.
-%% -spec invariant(S :: eqc_statem:dynamic_state()) -> boolean().
-%% invariant(_S) ->
-%% true.
 
 %% @doc Default generated property
 -spec prop_claim(proper:symbolic_state()) -> proper:property().
