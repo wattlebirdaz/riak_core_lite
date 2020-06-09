@@ -17,8 +17,8 @@
 
 %Entry Eunit
 claimStatem_test()->
-    {timeout, 10000,
-        ?_assert(proper:quickcheck(prop_claim(initial_state_data()),[{numtests, 10000}]))}.
+    {timeout, 5000,
+        ?_assert(proper:quickcheck(prop_claim(initial_state_data()),[{numtests, 5000}]))}.
 
 %% -- State ------------------------------------------------------------------
 -record(state,

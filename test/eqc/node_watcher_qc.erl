@@ -40,8 +40,8 @@
 -define(ORDSET(L), ordsets:from_list(L)).
 
 qc_test_() ->
-    {timeout, 10000,
-    ?_assert(proper:quickcheck(prop_main(),[{numtests, 10000}]))}.
+    {timeout, 5000,
+    ?_assert(proper:quickcheck(prop_main(),[{numtests, 5000}]))}.
 
 prop_main() ->
     ?SETUP(

@@ -60,8 +60,8 @@
 %%
 
 bprops_test_() -> 
-    {timeout, 10000,
-        ?_assert(proper:quickcheck(?QC_OUT(prop_buckets()), [{numtests, 10000}]))
+    {timeout, 5000,
+        ?_assert(proper:quickcheck(?QC_OUT(prop_buckets()), [{numtests, 5000}]))
     }.
 
 %%
