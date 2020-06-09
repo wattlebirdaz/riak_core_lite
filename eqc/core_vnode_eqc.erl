@@ -23,9 +23,10 @@
 %% @doc  QuickCheck tests for riak_core_vnode code
 
 -module(core_vnode_eqc).
--ifdef(EQC).
--include_lib("eqc/include/eqc.hrl").
--include_lib("eqc/include/eqc_fsm.hrl").
+-ifdef(TEST).
+-ifdef(PROPER).
+-include_lib("proper/include/proper.hrl").
+%-include_lib("eqc/include/eqc_fsm.hrl").
 -include_lib("eunit/include/eunit.hrl").
 -include_lib("riak_core/include/riak_core_vnode.hrl").
 -compile([export_all]).
@@ -449,4 +450,5 @@ filter_work(Work, Pid) ->
                          end
                  end, Work).
 
+-endif.
 -endif.

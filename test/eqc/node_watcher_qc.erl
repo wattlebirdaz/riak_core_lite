@@ -21,10 +21,9 @@
 %% -------------------------------------------------------------------
 -module(node_watcher_qc).
 
--ifdef(EQC).
+-ifdef(PROPER).
 
--include_lib("eqc/include/eqc.hrl").
--include_lib("eqc/include/eqc_statem.hrl").
+-include_lib("proper/include/proper.hrl").
 -include_lib("eunit/include/eunit.hrl").
 
 -compile(export_all).
@@ -36,12 +35,13 @@
                  peers = []}).
 
 -define(QC_OUT(P),
-        eqc:on_output(fun(Str, Args) -> io:format(user, Str, Args) end, P)).
+        proper:on_output(fun(Str, Args) -> io:format(user, Str, Args) end, P)).
 
 -define(ORDSET(L), ordsets:from_list(L)).
 
 qc_test_() ->
-    {timeout, 120, fun() -> ?assert(eqc:quickcheck(?QC_OUT(prop_main()))) end}.
+    {timeout, 5000,
+    ?_assert(proper:quickcheck(prop_main(),[{numtests, 5000}]))}.
 
 prop_main() ->
     ?SETUP(
@@ -102,7 +102,7 @@ ensure_started(Mod) ->
 
 
 %% ====================================================================
-%% eqc_statem callbacks
+%%proper_statem callbacks
 %% ====================================================================
 
 initial_state() ->

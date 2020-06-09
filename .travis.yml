@@ -7,6 +7,7 @@ install:
   - ./rebar3 update
 script:
   - make test
+  - make proper
   - make coverage
   - ./rebar3 as test coveralls send
   - make lint

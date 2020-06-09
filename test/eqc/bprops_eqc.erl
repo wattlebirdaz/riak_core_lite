@@ -20,9 +20,9 @@
 -module(bprops_eqc).
 
 %%
-%% This module defines a collection of EQC state_m commands, for
+%% This module defines a collection of PROPER state_m commands, for
 %% testing the riak_core_bucket module.  In order to understand this
-%% test, you should understand EQC generally, and the EQC state machine
+%% test, you should understand PROPER generally, and the PROPER state machine
 %% testing framework and callback conventions.
 %%
 %% TODO This module currently tests a limited subset of the
@@ -31,9 +31,8 @@
 %%      More attention needs to be spent on these tests!
 %%
 
--ifdef(EQC).
--include_lib("eqc/include/eqc.hrl").
--include_lib("eqc/include/eqc_statem.hrl").
+-ifdef(PROPER).
+-include_lib("proper/include/proper.hrl").
 -include_lib("eunit/include/eunit.hrl").
 
 -compile(export_all).
@@ -45,7 +44,7 @@
 -define(BPROP_KEYS, [foo, bar, tapas]).
 -define(DEFAULT_BPROPS, [{n_val, 3}]).
 -define(QC_OUT(P),
-    eqc:on_output(fun(Str, Args) -> io:format(user, Str, Args) end, P)).
+   proper:on_output(fun(Str, Args) -> io:format(user, Str, Args) end, P)).
 
 
 %%
@@ -60,10 +59,9 @@
 %% Eunit entrypoints
 %%
 
-bprops_test_() -> {
-        timeout, 60,
-        ?_test(?assert(
-            eqc:quickcheck(?QC_OUT(eqc:testing_time(50, prop_buckets())))))
+bprops_test_() -> 
+    {timeout, 5000,
+        ?_assert(proper:quickcheck(?QC_OUT(prop_buckets()), [{numtests, 5000}]))
     }.
 
 %%
@@ -74,25 +72,41 @@ run() ->
     run(100).
 
 run(N) ->
-    eqc:quickcheck(eqc:numtests(N, prop_buckets())).
+    proper:quickcheck(proper:numtests(N, prop_buckets())).
 
 rerun() ->
-    eqc:check(eqc_statem:show_states(prop_buckets())).
+    proper:check(proper:show_states(prop_buckets())).
 
 cover() ->
     cover(100).
 
 cover(N) ->
     cover:compile_beam(riak_core_bucket),
-    eqc:quickcheck(eqc:numtests(N, prop_buckets())),
+    proper:quickcheck(proper:numtests(N, prop_buckets())),
     cover:analyse_to_file(riak_core_bucket, [html]).
 
+%%
+%TODO
+command(State) ->
+    oneof([{call, ?MODULE, set_bucket, set_bucket_args(State)},
+           {call, ?MODULE, get_bucket, get_bucket_args(State)}
+          %[{call, ?MODULE,append_bucket_defaults/1}] 
+          %[{call, ?MODULE,get_bucket/2}] ++
+          %[{call, ?MODULE,reset_bucket/1}] ++
+          %[{call, ?MODULE,get_buckets/1}] ++
+          %[{call, ?MODULE,bucket_nval_map/1}] ++
+          %[{call, ?MODULE,default_object_navl,[]}] ++
+          %[{call, ?MODULE,merge_props/2}] ++
+          %[{call, ?MODULE,name/1}] ++
+          %[{call, ?MODULE,nval/1}] ++
+          %[{call, ?MODULE,get_vault/2}]
+    ]).
 
 %%
 %% eqc_statem initial model
 %%
 
--spec initial_state() -> eqc_statem:symbolic_state().
+-spec initial_state() -> proper:symbolic_state().
 initial_state() ->
     #state{}.
 
@@ -106,21 +120,8 @@ set_bucket_args(_S) ->
 set_bucket(Bucket, BProps) ->
     riak_core_bucket:set_bucket(Bucket, BProps).
 
-set_bucket_post(#state{buckets=Buckets}, [Bucket, _BProps], Res) ->
-    case {Res, orddict:find(Bucket, Buckets)} of
-        %% first time bucket has been set
-        {ok, error} ->
-            true;
-        %% bucket has been set before
-        {ok, {ok, _OldBProps}} ->
-            true;
-        %% anything other than ok is a failure
-        %% TODO revisit, e.g., generate invalid inputs to force an error
-        _ ->
-            false
-    end.
-
-set_bucket_next(#state{buckets=Buckets} = S, _Res, [Bucket, BProps]) ->
+next_state(#state{buckets=Buckets} = S,_Res,{call,?MODULE, set_bucket, [Bucket, BProps]}) ->
+%set_bucket_next(#state{buckets=Buckets} = S, _Res, [Bucket, BProps])
     %%
     %% Get any previously defined properties from the model
     %%
@@ -140,13 +141,17 @@ set_bucket_next(#state{buckets=Buckets} = S, _Res, [Bucket, BProps]) ->
             ),
             Buckets
         )
-    }.
+    };
+next_state(S,_Res,{call,?MODULE, get_bucket, [Bucket]}) ->
+    S.
 
 -spec expected_properties(bucket_name(), orddict(), orddict()) -> orddict().
 expected_properties(Bucket, OldProps, NewProps) ->
     Props = riak_core_bucket_props:merge(NewProps, OldProps),
     orddict:store(name, Bucket, Props).
 
+eq(A,B)->
+        A=:=B.
 %%
 %% get_bucket command
 %%
@@ -157,7 +162,10 @@ get_bucket_args(_S) ->
 get_bucket(Bucket) ->
     riak_core_bucket:get_bucket(Bucket).
 
-get_bucket_post(#state{buckets=Buckets}, [Bucket], Res) ->
+precondition(_S, {call, ?MODULE, _,_})->
+    true.
+%get_bucket_post(#state{buckets=Buckets}, [Bucket], Res)
+postcondition(#state{buckets=Buckets},{call,?MODULE,get_bucket, [Bucket]}, Res) ->
     BPropsFind = orddict:find(Bucket, Buckets),
     case {Res, BPropsFind} of
         {error, _} ->
@@ -172,28 +180,44 @@ get_bucket_post(#state{buckets=Buckets}, [Bucket], Res) ->
                 orddict:from_list(Res),
                 orddict:from_list(?DEFAULT_BPROPS ++ [{name, Bucket}])
             )
+    end;
+    
+postcondition(#state{buckets=Buckets},{call,?MODULE, set_bucket, [Bucket, _BProps]}, Res) ->
+%set_bucket_post(#state{buckets=Buckets}, [Bucket, _BProps], Res)
+    case {Res, orddict:find(Bucket, Buckets)} of
+        %% first time bucket has been set
+        {ok, error} ->
+            true;
+        %% bucket has been set before
+        {ok, {ok, _OldBProps}} ->
+            true;
+        %% anything other than ok is a failure
+        %% TODO revisit, e.g., generate invalid inputs to force an error
+        _ ->
+            false
     end.
 
 %%
-%% all_n command
+%% all_n command %TODO
 %%
 
-all_n_args(_) -> [].
+% all_n_args(_) -> [].
 
-all_n() ->
-    {ok, Ring} = riak_core_ring_manager:get_my_ring(),
-    riak_core_bucket:all_n(Ring).
+% all_n() ->
+%     {ok, Ring} = riak_core_ring_manager:get_my_ring(),
+%     riak_core_bucket:all_n(Ring).
 
-all_n_post(#state{buckets=Buckets}, [], Res) ->
-    AllNVals = orddict:fold(
-        fun(_Bucket, BProps, Accum) ->
-            {ok, NVal} = orddict:find(n_val, BProps),
-            [NVal | Accum]
-        end,
-        [],
-        Buckets
-    ) ++ [proplists:get_value(n_val, ?DEFAULT_BPROPS)],
-    eq(ordsets:from_list(Res), ordsets:from_list(AllNVals)).
+% all_n_post(#state{buckets=Buckets}, [], Res) ->
+% %postcondition(#state{buckets=Buckets}, {call,?MODULE,_,[]}, Res) ->
+%     AllNVals = orddict:fold(
+%         fun(_Bucket, BProps, Accum) ->
+%             {ok, NVal} = orddict:find(n_val, BProps),
+%             [NVal | Accum]
+%         end,
+%         [],
+%         Buckets
+%     ) ++ [proplists:get_value(n_val, ?DEFAULT_BPROPS)],
+%     equals(ordsets:from_list(Res), ordsets:from_list(AllNVals)).
 
 
 %% TODO Add more commands here
@@ -203,31 +227,31 @@ all_n_post(#state{buckets=Buckets}, [], Res) ->
 %%
 
 bucket_name() ->
-    eqc_gen:elements(?NAMES).
+    proper_types:elements(?NAMES).
 
 bucket_props() ->
-    eqc_gen:list(bucket_prop()).
+    proper_types:list(bucket_prop()).
 
 bucket_prop() ->
-    eqc_gen:oneof(
+    oneof(
         [
-            {n_val, pos_integer()},
+            {n_val, pos_int()},
             {bucket_prop_name(), bucket_prop_value()}
         ]
     ).
 
-pos_integer() ->
-    ?LET(N, eqc_gen:nat(), N + 1).
+pos_int() ->
+    ?LET(N, proper_types:nat(), N + 1).
 
 bucket_prop_name() ->
-    eqc_gen:elements(?BPROP_KEYS).
+    proper_types:elements(?BPROP_KEYS).
 
 bucket_prop_value() ->
-    eqc_gen:bool().
+    proper_types:bool().
 
 
 %%
-%% eqc properties
+%% proper properties
 %%
 
 prop_buckets() ->
@@ -240,14 +264,14 @@ prop_buckets() ->
                                                     fun() ->
                                                         run_commands(?MODULE, Cmds)
                                                     end),
-                    pretty_commands(
-                        ?MODULE, Cmds,
-                        {H, S, Res},
+                    % pretty_commands(
+                    %     ?MODULE, Cmds,
+                    %     {H, S, Res},
                         aggregate(
                             command_names(Cmds),
                             Res == ok
                         )
-                    )
+                    % )
                 end
             )
         )
