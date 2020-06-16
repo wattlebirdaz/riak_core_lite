@@ -40,8 +40,9 @@
 -define(ORDSET(L), ordsets:from_list(L)).
 
 qc_test_() ->
-    {timeout, 5000,
-    ?_assert(proper:quickcheck(prop_main(),[{numtests, 5000}]))}.
+    {timeout, 10000,
+      ?_assert(proper:quickcheck(prop_main(),[{numtests, 10000}]))
+    }.
 
 prop_main() ->
     ?SETUP(
@@ -114,8 +115,8 @@ command(S) ->
            {call, ?MODULE, local_service_up, [g_service()]},
            {call, ?MODULE, local_service_down, [g_service()]},
            {call, ?MODULE, local_service_kill, [g_service(), S]},
-           {call, ?MODULE, local_node_up, []},
-           {call, ?MODULE, local_node_down, []},
+           %{call, ?MODULE, local_node_up, []},
+           %{call, ?MODULE, local_node_down, []},
            {call, ?MODULE, remote_service_up, [g_node(), g_services()]},
            {call, ?MODULE, remote_service_down, [g_node()]},
            {call, ?MODULE, remote_service_down_disterl, [g_node()]},
