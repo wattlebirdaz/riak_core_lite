@@ -34,9 +34,7 @@ pulse:
 	
 proper:
 	${REBAR} as proper do eunit
-p:
-	${REBAR} proper
-	
+  
 epc:
 	${REBAR} as epc eunit
 	

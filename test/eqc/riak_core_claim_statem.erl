@@ -84,7 +84,7 @@ precondition(_F,_T,_S,{call,_,leave_node,_}) ->
 % @doc claim_pre/3 - Precondition for generation
 %-spec claim_pre(_From, _To, S :: proper:symbolic_state()) -> boolean().
 %claim_pre(_From, _To, #state{ring=undefined}) ->
- precondition(_F,_T,#state{ring=undefined},{call, _, claim,_}) ->
+precondition(_F,_T,#state{ring=undefined},{call, _, claim,_}) ->
     false;
 %claim_pre(_From, _To, _S) ->
 precondition(_F,_T,_S,{call,_ , claim, _}) ->
