@@ -15,8 +15,9 @@
 
 proper_test_() ->
     {timeout,
-    5000,
-    ?_assert(proper:quickcheck(prop_vclock(), [{numtests, 5000}]))}.
+    10000,
+    ?_assert(proper:quickcheck(prop_vclock(), [{numtests, 10000}]))}.
+
 test() ->
     proper:quickcheck(more_commands(10, prop_vclock())).
 
