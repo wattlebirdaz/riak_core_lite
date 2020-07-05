@@ -1006,12 +1006,13 @@ check_up(Pairs, UpNodes) ->
 		   non_neg_integer()) -> [{Partition :: non_neg_integer(),
 					   Owner :: node()}].
 
+%% WARN directly uses chash structure
 repair_pairs(Ring, Partition) ->
     Owner = riak_core_ring:index_owner(Ring, Partition),
     CH = riak_core_ring:chash(Ring),
     [_, Before] =
-	chash:predecessors(<<Partition:160/integer>>, CH, 2),
-    [After] = chash:successors(<<Partition:160/integer>>,
+	chash:predecessors(<<Partition:160/integer>>, CH, 2), %% WARN SHA-1
+    [After] = chash:successors(<<Partition:160/integer>>, %% WARN SHA-1
 			       CH, 1),
     [Before, {Partition, Owner}, After].
 

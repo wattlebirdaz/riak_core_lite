@@ -18,6 +18,7 @@ _build/
 data/
 nonode@nohost/
 ring_manager_eunit/
+.vscode/
 sim.out
 .eqc
 compile_commands.json

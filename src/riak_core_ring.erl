@@ -205,6 +205,8 @@ ready_members(#chstate{members = Members}) ->
 -spec all_owners(State :: chstate()) -> [{Index ::
 					      integer(),
 					  Node :: term()}].
+%% WARN: does not fit to specification in chash_rslicicng:
+%% node_entry() :: {index :: float(), Node :: term()}
 
 all_owners(State) -> chash:nodes(State#chstate.chring).
 
@@ -216,7 +218,7 @@ all_owners(State) -> chash:nodes(State#chstate.chring).
 all_preflists(State, N) ->
     [lists:sublist(preflist(Key, State), N)
      || Key
-	    <- [<<(I + 1):160/integer>>
+	    <- [<<(I + 1):160/integer>> %% WARN: Relies on hardcoded SHA-1 space
 		|| {I, _Owner} <- (?MODULE):all_owners(State)]].
 
 %% @doc For two rings, return the list of owners that have differing ownership.
@@ -275,6 +277,8 @@ fresh(RingSize, NodeName) ->
 %%      by a dummy host
 -spec resize(chstate(), ring_size()) -> chstate().
 
+%% NOTE with chash_rslicing this operation is not necessary anymore.
+%% TODO find out when resize is called
 resize(State, NewRingSize) ->
     NewRing = lists:foldl(fun ({Idx, Owner}, RingAcc) ->
 				  chash:update(Idx, Owner, RingAcc)
@@ -370,6 +374,7 @@ owner_node(State) -> State#chstate.nodename.
 					Node :: term()}].
 
 preflist(Key, State) ->
+	%% NOTE Need a more abstract version in chash to provide a preflist.
     chash:successors(Key, State#chstate.chring).
 
 %% @doc Return a randomly-chosen node from amongst the owners.
@@ -490,7 +495,7 @@ rename_node(State = #chstate{chring = Ring,
 			chstate()) -> integer().
 
 responsible_index(ChashKey, #chstate{chring = Ring}) ->
-    <<IndexAsInt:160/integer>> = ChashKey,
+    <<IndexAsInt:160/integer>> = ChashKey, %% WARN hard-coded SHA-1 values
     chash:next_index(IndexAsInt, Ring).
 
 %% @doc Given a key and an index in the current ring, determine
@@ -519,7 +524,7 @@ future_index(CHashKey, OrigIdx, NValCheck, State) ->
 
 future_index(CHashKey, OrigIdx, NValCheck, OrigCount,
 	     NextCount) ->
-    <<CHashInt:160/integer>> = CHashKey,
+    <<CHashInt:160/integer>> = CHashKey, %% WARN hard-coded SHA-1 values
     OrigInc = chash:ring_increment(OrigCount),
     NextInc = chash:ring_increment(NextCount),
     %% Determine position in the ring of partition that owns key (head of preflist)
@@ -799,6 +804,7 @@ future_indices(State, Node) ->
 -spec all_next_owners(chstate()) -> [{integer(),
 				      term()}].
 
+%% WARN Uses chash() strucure directly
 all_next_owners(CState) ->
     Next = riak_core_ring:pending_changes(CState),
     [{Idx, NextOwner} || {Idx, _, NextOwner, _, _} <- Next].
