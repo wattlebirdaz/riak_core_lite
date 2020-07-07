@@ -38,11 +38,12 @@
         proper:on_output(fun(Str, Args) -> io:format(user, Str, Args) end, P)).
 
 -define(ORDSET(L), ordsets:from_list(L)).
-
+%TODO
 % qc_test_() ->
 %     {timeout, 1500,
 %       ?_assert(proper:quickcheck(?QC_OUT(prop_main()),[{numtests, 5000}]))
 %     }.
+
 
 prop_main() ->
     ?SETUP(
@@ -115,8 +116,8 @@ command(S) ->
            {call, ?MODULE, local_service_up, [g_service()]},
            {call, ?MODULE, local_service_down, [g_service()]},
            {call, ?MODULE, local_service_kill, [g_service(), S]},
-           {call, ?MODULE, local_node_up, []},
-           {call, ?MODULE, local_node_down, []},
+           %{call, ?MODULE, local_node_up, []},
+           %{call, ?MODULE, local_node_down, []},
            {call, ?MODULE, remote_service_up, [g_node(), g_services()]},
            {call, ?MODULE, remote_service_down, [g_node()]},
            {call, ?MODULE, remote_service_down_disterl, [g_node()]},
