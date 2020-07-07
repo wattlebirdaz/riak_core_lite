@@ -81,6 +81,14 @@
          meets_target_n/2,
          diagonal_stripe/2]).
 
+-ifdef(TEST).
+-ifdef(PROPER).
+-compile(export_all).
+-export([prop_claim_ensures_unique_nodes/1, prop_wants/0, prop_wants_counts/0, eqc_check/2]).
+-include_lib("proper/include/proper.hrl").
+-include_lib("eunit/include/eunit.hrl").
+-endif.
+-endif.
 
 -define(DEF_TARGET_N, 4).
 
@@ -723,22 +731,17 @@ has_violations(Diag) ->
     (Overhang > 0 andalso Overhang < 4). %% hardcoded target n of 4
 
 
--ifdef(EQC).
-
--export([prop_claim_ensures_unique_nodes/1, prop_wants/0, prop_wants_counts/0, eqc_check/2]).
--include_lib("eqc/include/eqc.hrl").
--include_lib("eunit/include/eunit.hrl").
-
+-ifdef(PROPER).
 
 -define(QC_OUT(P),
-        eqc:on_output(fun(Str, Args) -> io:format(user, Str, Args) end, P)).
+        proper:on_output(fun(Str, Args) -> io:format(user, Str, Args) end, P)).
 
 -define(POW_2(N), trunc(math:pow(2, N))).
 
 eqc_check(File, Prop) ->
     {ok, Bytes} = file:read_file(File),
     CE = binary_to_term(Bytes),
-    eqc:check(Prop, CE).
+    proper:check(Prop, CE).
 
 test_nodes(Count) ->
     [node() | [list_to_atom(lists:concat(["n_", N])) || N <- lists:seq(1, Count-1)]].
@@ -747,25 +750,23 @@ test_nodes(Count, StartNode) ->
     [list_to_atom(lists:concat(["n_", N])) || N <- lists:seq(StartNode, StartNode + Count)].
 
 property_claim_ensures_unique_nodes_v2_test_() ->
-    Prop = eqc:testing_time(30, ?QC_OUT(prop_claim_ensures_unique_nodes(choose_claim_v2))),
-    {timeout, 120, fun() -> ?assert(eqc:quickcheck(Prop)) end}.
+    Prop = ?QC_OUT(prop_claim_ensures_unique_nodes(choose_claim_v2)),
+    {timeout, 120, fun() -> ?_assert(proper:quickcheck(Prop, [{numtests, 5000}])) end}.
 
 property_claim_ensures_unique_nodes_adding_groups_v2_test_() ->
-    Prop = eqc:testing_time(30, ?QC_OUT(
-                                prop_claim_ensures_unique_nodes_adding_groups(choose_claim_v2))),
-    {timeout, 120, fun() -> ?assert(eqc:quickcheck(Prop)) end}.
+    Prop = ?QC_OUT(prop_claim_ensures_unique_nodes_adding_groups(choose_claim_v2)),
+    {timeout, 120, fun() -> ?_assert(proper:quickcheck(Prop, [{numtests, 5000}])) end}.
 
 property_claim_ensures_unique_nodes_adding_singly_v2_test_() ->
-    Prop = eqc:testing_time(30, ?QC_OUT(
-                                prop_claim_ensures_unique_nodes_adding_singly(choose_claim_v2))),
-    {timeout, 120, fun() -> ?assert(eqc:quickcheck(Prop)) end}.
+    Prop = ?QC_OUT(prop_claim_ensures_unique_nodes_adding_singly(choose_claim_v2)),
+    {timeout, 120, fun() -> ?_assert(proper:quickcheck(Prop, [{numtests, 5000}])) end}.
 
 prop_claim_ensures_unique_nodes(ChooseFun) ->
     %% NOTE: We know that this doesn't work for the case of {_, 3}.
     %% NOTE2: uses undocumented "double_shrink", is expensive, but should get
     %% around those case where we shrink to a non-minimal case because
     %% some intermediate combinations of ring_size/node have no violations
-    ?FORALL({PartsPow, NodeCount}, eqc_gen:double_shrink({choose(4, 9), choose(4, 15)}),
+    ?FORALL({PartsPow, NodeCount}, {choose(4, 9), choose(4, 15)},%proper_gen:double_shrink({choose(4, 9), choose(4, 15)}),
             begin
                 Nval = 3,
                 TNval = Nval + 1,
@@ -814,7 +815,7 @@ prop_claim_ensures_unique_nodes_adding_groups(ChooseFun) ->
     %% around those case where we shrink to a non-minimal case because
     %% some intermediate combinations of ring_size/node have no violations
     ?FORALL({PartsPow, BaseNodes, AddedNodes},
-            eqc_gen:double_shrink({choose(4, 9), choose(2, 10), choose(2, 5)}),
+            {choose(4, 9), choose(2, 10), choose(2, 5)},%proper_gen:double_shrink({choose(4, 9), choose(2, 10), choose(2, 5)}),
             begin
                 Nval = 3,
                 TNval = Nval + 1,
@@ -871,7 +872,7 @@ prop_claim_ensures_unique_nodes_adding_singly(ChooseFun) ->
     %% NOTE2: uses undocumented "double_shrink", is expensive, but should get
     %% around those case where we shrink to a non-minimal case because
     %% some intermediate combinations of ring_size/node have no violations
-    ?FORALL({PartsPow, NodeCount}, eqc_gen:double_shrink({choose(4, 9), choose(4, 15)}),
+    ?FORALL({PartsPow, NodeCount}, {choose(4, 9), choose(4, 15)},%proper:double_shrink({choose(4, 9), choose(4, 15)}),
             begin
                 Nval = 3,
                 TNval = Nval + 1,
@@ -945,18 +946,20 @@ balanced_ring(RingSize, NodeCount, Ring) ->
 
 
 wants_counts_test() ->
-    ?assert(eqc:quickcheck(?QC_OUT((prop_wants_counts())))).
+    {timeout, 120,
+    ?assert(proper:quickcheck(?QC_OUT((prop_wants_counts())), [{numtests, 5000}]))}.
 
 prop_wants_counts() ->
     ?FORALL({S, Q}, {large_pos(100), large_pos(100000)},
             begin
                 Wants = wants_counts(S, Q),
-                conjunction([{len, equals(S, length(Wants))},
-                             {sum, equals(Q, lists:sum(Wants))}])
+                conjunction([{len, S == length(Wants)},
+                             {sum, Q == lists:sum(Wants)}])
             end).
 
 wants_test() ->
-    ?assert(eqc:quickcheck(?QC_OUT((prop_wants())))).
+    {timeout, 120,
+    ?_assert(proper:quickcheck(?QC_OUT(prop_wants()), [{numtests, 5000}]))}.
 
 prop_wants() ->
     ?FORALL({NodeStatus, Q},
@@ -994,75 +997,15 @@ prop_wants() ->
                        io:format(user, "ActiveWants: ~p\n", [ActiveWants]),
                        io:format(user, "InactiveWants: ~p\n", [InactiveWants])
                    end,
-                   conjunction([{wants, equals(length(Wants), length(NodeStatus))},
-                                {active, equals(Q, ActiveSum)},
-                                {inactive, equals(0, InactiveSum)}]))
+                   conjunction([{wants, length(Wants) == length(NodeStatus)},
+                                {active, Q == ActiveSum},
+                                {inactive, 0 == InactiveSum}]))
             end).
 
 %% Large positive integer between 1 and Max
 large_pos(Max) ->
     ?LET(X, largeint(), 1 + (abs(X) rem Max)).
 
-take_idxs_test() ->
-    ?assert(eqc:quickcheck(?QC_OUT((prop_take_idxs())))).
-
-prop_take_idxs() ->
-    ?FORALL({OwnersSeed, CIdxsSeed, ExchangesSeed, TNSeed},
-            {non_empty(list(largeint())),  % [OwnerSeed]
-             non_empty(list(largeint())),  % [CIdxSeed]
-             non_empty(list({int(), int()})), % {GiveSeed, TakeSeed}
-             int()}, % TNSeed
-            begin
-                %% Generate Nis - duplicate owners seed to make sure Q > S
-                S = length(ExchangesSeed),
-                Dup = roundup(S / length(OwnersSeed)),
-                Owners = lists:flatten(
-                           lists:duplicate(Dup,
-                                           [tnode(abs(OwnerSeed) rem S) ||
-                                               OwnerSeed <- OwnersSeed])),
-                Q = length(Owners),
-                TN = 1+abs(TNSeed),
-
-
-                Ownership0 = orddict:from_list([{tnode(I), []} || I <- lists:seq(0, S -1)]),
-                Ownership = lists:foldl(fun({I, O}, A) ->
-                                                orddict:append_list(O, [I], A)
-                                        end,
-                                        Ownership0,
-                                        lists:zip(lists:seq(0, Q-1), Owners)),
-                NIs = [{Node, undefined, Owned} || {Node, Owned} <- Ownership],
-
-                %% Generate claimable indices
-                CIdxs = ordsets:from_list([abs(Idx) rem Q || Idx <- CIdxsSeed]),
-
-                %% io:format(user, "ExchangesSeed (~p): ~p\n", [length(ExchangesSeed),
-                %%                                              ExchangesSeed]),
-                %% io:format(user, "NIs (~p): ~p\n", [length(NIs), NIs]),
-
-                %% Generate exchanges
-                Exchanges = [{Node,  % node name
-                              abs(GiveSeed) rem (length(OIdxs) + 1), % maximum indices to give
-                              abs(TakeSeed) rem (Q+1), % maximum indices to take
-                              CIdxs} || % indices that can be claimed by node
-                                {{Node, _Want, OIdxs}, {GiveSeed, TakeSeed}} <-
-                                    lists:zip(NIs, ExchangesSeed)],
-
-                %% Fire the test
-                NIs2 = take_idxs(Exchanges, NIs, Q, TN),
-
-                %% Check All nodes are still in NIs
-                %% Check that no node lost more than it wanted to give
-                ?WHENFAIL(
-                   begin
-                       io:format(user, "Exchanges:\n~p\n", [Exchanges]),
-                       io:format(user, "NIs:\n~p\n", [NIs]),
-                       io:format(user, "NIs2:\n~p\n", [NIs2]),
-                       io:format(user, "Q: ~p\nTN: ~p\n", [Q, TN])
-                   end,
-                   check_deltas(Exchanges, NIs, NIs2, Q, TN))
-                   %% conjunction([{len, equals(length(NIs), length(NIs2))},
-                   %%              {delta, check_deltas(Exchanges, NIs, NIs2, Q, TN)}]))
-            end).
 
 tnode(I) ->
     list_to_atom("n" ++ integer_to_list(I)).

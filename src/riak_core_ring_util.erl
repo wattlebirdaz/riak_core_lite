@@ -30,13 +30,15 @@
          hash_is_partition_boundary/2]).
 
 -ifdef(TEST).
--ifdef(EQC).
+-ifdef(PROPER).
+
+-compile(export_all).
 -export([prop_ids_are_boundaries/0,
          prop_reverse/0,
          prop_monotonic/0,
          prop_only_boundaries/0]).
 
--include_lib("eqc/include/eqc.hrl").
+-include_lib("proper/include/proper.hrl").
 -endif.
 -include_lib("eunit/include/eunit.hrl").
 -endif.
@@ -136,10 +138,10 @@ boundary_test() ->
     ?assertNot(riak_core_ring_util:hash_is_partition_boundary(<<(BoundaryIndex + 2):160>>, 32)),
     ?assertNot(riak_core_ring_util:hash_is_partition_boundary(<<(BoundaryIndex + 10):160>>, 32)).
 
--ifdef(EQC).
+-ifdef(PROPER).
 
 -define(QC_OUT(P),
-        eqc:on_output(fun(Str, Args) ->
+        proper:on_output(fun(Str, Args) ->
                               io:format(user, Str, Args) end, P)).
 -define(TEST_TIME_SECS, 5).
 
@@ -154,18 +156,18 @@ ids_are_boundaries_test_() ->
 
 test_ids_are_boundaries() ->
     test_ids_are_boundaries(?TEST_TIME_SECS).
-
-test_ids_are_boundaries(TestTimeSecs) ->
-        eqc:quickcheck(eqc:testing_time(TestTimeSecs, ?QC_OUT(prop_ids_are_boundaries()))).
+%TODO check time sec
+test_ids_are_boundaries(_TestTimeSecs) ->
+        proper:quickcheck(?QC_OUT(prop_ids_are_boundaries()),[{numtests, 5000}]).
 
 reverse_test_() ->
     {timeout, ?TEST_TIME_SECS+5, [?_assert(test_reverse() =:= true)]}.
 
 test_reverse() ->
     test_reverse(?TEST_TIME_SECS).
-
-test_reverse(TestTimeSecs) ->
-        eqc:quickcheck(eqc:testing_time(TestTimeSecs, ?QC_OUT(prop_reverse()))).
+%TODO check time sec
+test_reverse(_TestTimeSecs) ->
+        proper:quickcheck(prop_reverse(),[{numtests, 5000}]).
 
 
 monotonic_test_() ->
@@ -175,7 +177,7 @@ test_monotonic() ->
     test_monotonic(?TEST_TIME_SECS).
 
 test_monotonic(TestTimeSecs) ->
-        eqc:quickcheck(eqc:testing_time(TestTimeSecs, ?QC_OUT(prop_monotonic()))).
+        proper:quickcheck(?QC_OUT(prop_monotonic()),[{numtests, 5000}]).
 
 
 %% `prop_only_boundaries' should run a little longer: not quite as
@@ -188,7 +190,7 @@ test_only_boundaries() ->
     test_only_boundaries(?TEST_TIME_SECS+10).
 
 test_only_boundaries(TestTimeSecs) ->
-        eqc:quickcheck(eqc:testing_time(TestTimeSecs, ?QC_OUT(prop_only_boundaries()))).
+        proper:quickcheck(prop_only_boundaries(),[{numtests, 5000}]).
 
 %% Partition IDs should map to hash values which are partition boundaries
 prop_ids_are_boundaries() ->

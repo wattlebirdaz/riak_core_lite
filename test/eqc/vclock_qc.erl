@@ -15,8 +15,8 @@
 
 proper_test_() ->
     {timeout,
-    10000,
-    ?_assert(proper:quickcheck(prop_vclock(), [{numtests, 10000}]))}.
+    120,
+    ?_assert(proper:quickcheck(prop_vclock(), [{numtests, 5000}]))}.
 test() ->
     proper:quickcheck(more_commands(10, prop_vclock())).
 
@@ -95,12 +95,11 @@ prop_vclock() ->
     ?FORALL(Cmds,commands(?MODULE),
             begin
                 put(timestamp, 1),
-                {H,S,Res} = run_commands(?MODULE, Cmds),
+                {_H,S,Res} = run_commands(?MODULE, Cmds),
                 aggregate([ length(V) || {_,V} <- S#state.vclocks],
                 aggregate(command_names(Cmds),
                           collect({num_vclocks_div_10, length(S#state.vclocks) div 10},
-                                  %pretty_commands(?MODULE, Cmds, {H,S,Res}, 
-                                  Res == ok%) %maybe not supported in proper
+                                  Res == ok
                                   )))
             end).
 

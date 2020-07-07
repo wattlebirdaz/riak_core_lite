@@ -60,8 +60,9 @@
          substitutions/2]).
 
 -ifdef(TEST).
--ifdef(EQC).
--include_lib("eqc/include/eqc.hrl").
+-ifdef(PROPER).
+-include_lib("proper/include/proper.hrl").
+%-compile(export_all).
 -endif.
 -include_lib("eunit/include/eunit.hrl").
 -endif.
@@ -633,20 +634,22 @@ substitute(Names, Mapping, L) ->
 %% -------------------------------------------------------------------
 
 -ifdef(TEST).
--ifdef(EQC).
+-ifdef(PROPER).
 
 property_adjacency_summary_test_() ->
-    {timeout, 60, ?_test(eqc:quickcheck(eqc:testing_time(30, prop_adjacency_summary())))}.
+    {timeout,120, 
+    ?_test(proper:quickcheck(prop_adjacency_summary(),[{numtest,5000}]))}.
 
 longer_list(K, G) ->
-    ?SIZED(Size, resize(trunc(K*Size), list(resize(Size, G)))).
+    ?SIZED(Size, proper_types:resize(trunc(K*Size), list(proper_types:resize(Size, G)))).
 
 %% Compare directly constructing the adjacency matrix against
 %% one using prepend/fixup.
 prop_adjacency_summary() ->
     ?FORALL({OwnersSeed, S},
-            {non_empty(longer_list(40, largeint())), ?LET(X, int(), 1 + abs(X))},
+            {non_empty(longer_list(40, proper_types:largeint())), ?LET(X, proper_types:int(), 1 + abs(X))},
             begin
+        io:format("1\n"),
                 Owners = [list_to_atom("n" ++ integer_to_list(1 + (abs(I) rem S)))
                             || I <- OwnersSeed],
                 AM = adjacency_matrix(Owners),
@@ -654,8 +657,7 @@ prop_adjacency_summary() ->
 
                 {Owners2, _DAM2, FixDAM2} = build(Owners),
                 AS2 = summarize_am(dict:to_list(FixDAM2)),
-
-
+                io:format("2\n"),
                 ?WHENFAIL(
                    begin
                        io:format(user, "S=~p\nOwners =~p\n", [S, Owners]),
@@ -663,8 +665,9 @@ prop_adjacency_summary() ->
                        io:format(user, "=== FixAM2 ===\n~p\n", [dict:to_list(FixDAM2)]),
                        io:format(user, "=== AS2 ===\n~p\n", [AS2])
                    end,
-                   conjunction([{owners, equals(Owners, Owners2)},
-                                {am2,    equals(lists:sort(AS), lists:sort(AS2))}]))
+                   proper:conjunction([{owners, Owners == Owners2},
+                                {am2,    lists:sort(AS)== lists:sort(AS2)}]))
+               
             end).
 
 build(Owners) ->

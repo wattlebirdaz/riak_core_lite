@@ -17,8 +17,8 @@
 
 %Entry Eunit
 claim_test_()->
-    {timeout, 10000,
-        ?_assert(proper:quickcheck(prop_claim(with_ring_size(5)),[{numtests, 10000}] ))}.
+    {timeout, 120,
+        ?_assert(proper:quickcheck(prop_claim(with_ring_size(5)),[{numtests, 5000}] ))}.
 
 %% -- State ------------------------------------------------------------------
 -record(state,
@@ -50,8 +50,8 @@ starting(S) ->
 
 planning(S) ->
     [{planning, {call, ?MODULE, add_node, add_node_args(S)}},
-     {planning, {call, ?MODULE, leave_node, leave_node_args(S)}}%,
-     %{claiming, {call, ?MODULE, claim, claim_args(S)}} %TODO 
+     {planning, {call, ?MODULE, leave_node, leave_node_args(S)}},
+     {claiming, {call, ?MODULE, claim, claim_args(S)}} %TODO 
     ].
 
 claiming(S) ->
@@ -84,7 +84,7 @@ precondition(_F,_T,_S,{call,_,leave_node,_}) ->
 % @doc claim_pre/3 - Precondition for generation
 %-spec claim_pre(_From, _To, S :: proper:symbolic_state()) -> boolean().
 %claim_pre(_From, _To, #state{ring=undefined}) ->
- precondition(_F,_T,#state{ring=undefined},{call, _, claim,_}) ->
+precondition(_F,_T,#state{ring=undefined},{call, _, claim,_}) ->
     false;
 %claim_pre(_From, _To, _S) ->
 precondition(_F,_T,_S,{call,_ , claim, _}) ->
