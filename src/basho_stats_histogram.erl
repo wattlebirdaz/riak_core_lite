@@ -192,7 +192,7 @@ simple_test() ->
 %                 ?FMT("hist(x, seq(~w,~w,length.out=~w), plot=FALSE)$counts",
 %                      [Min, Max, Bins+1])),
 %     io:format("Min ~p, Max ~p, Bins ~p, Xs ~w~n",
-%                      [Min, Max, Bins, Xs]),           
+%                      [Min, Max, Bins, Xs]),
 %     case LCounts == RCounts of
 %         true ->
 %             true;
@@ -209,7 +209,8 @@ simple_test() ->
 %                 ?WHENFAIL(
 %                     begin
 %                         io:format("Min ~p, Max ~p, Bins ~p, Xs ~w~n", [Min, Max, Bins, Xs]),
-%                         Command = ?FMT("hist(x, seq(~w,~w,length.out=~w), plot=FALSE)$counts", [Min, Max, Bins+1]),
+%                         Command = ?FMT("hist(x, seq(~w,~w,length.out=~w), plot=FALSE)$counts",
+%                                               [Min, Max, Bins+1]),
 %                         InputStr = [integer_to_list(I) || I <- Xs],
 %                         io:format(?FMT("x <- c(~s)\n", [string:join(InputStr, ",")])),
 %                         io:format(?FMT("write(~s, ncolumns=1,file=stdout())\n", [Command]))

@@ -149,7 +149,7 @@ empty_test() ->
 %                 tuple_to_list(summary(update_all(Xs, new())))))))).
 
 % qc_test() ->
-%     %{timeout, 5000, 
+%     %{timeout, 5000,
 %     true = proper:quickcheck(prop_main()).%}.
 
 -endif.

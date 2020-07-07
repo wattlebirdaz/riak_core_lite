@@ -637,8 +637,8 @@ substitute(Names, Mapping, L) ->
 -ifdef(PROPER).
 
 property_adjacency_summary_test_() ->
-    {timeout,120, 
-    ?_test(proper:quickcheck(prop_adjacency_summary(),[{numtest,5000}]))}.
+    {timeout, 120,
+    ?_test(proper:quickcheck(prop_adjacency_summary(), [{numtest, 5000}]))}.
 
 longer_list(K, G) ->
     ?SIZED(Size, proper_types:resize(trunc(K*Size), list(proper_types:resize(Size, G)))).
@@ -647,7 +647,8 @@ longer_list(K, G) ->
 %% one using prepend/fixup.
 prop_adjacency_summary() ->
     ?FORALL({OwnersSeed, S},
-            {non_empty(longer_list(40, proper_types:largeint())), ?LET(X, proper_types:int(), 1 + abs(X))},
+            {non_empty(longer_list(40, proper_types:largeint())),
+             ?LET(X, proper_types:int(), 1 + abs(X))},
             begin
         io:format("1\n"),
                 Owners = [list_to_atom("n" ++ integer_to_list(1 + (abs(I) rem S)))
@@ -667,7 +668,6 @@ prop_adjacency_summary() ->
                    end,
                    proper:conjunction([{owners, Owners == Owners2},
                                 {am2,    lists:sort(AS)== lists:sort(AS2)}]))
-               
             end).
 
 build(Owners) ->

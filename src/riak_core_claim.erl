@@ -766,8 +766,8 @@ prop_claim_ensures_unique_nodes(ChooseFun) ->
     %% NOTE2: uses undocumented "double_shrink", is expensive, but should get
     %% around those case where we shrink to a non-minimal case because
     %% some intermediate combinations of ring_size/node have no violations
-    ?FORALL({PartsPow, NodeCount}, {choose(4, 9), choose(4, 15)},%proper_gen:double_shrink({choose(4, 9), choose(4, 15)}),
-            begin
+    ?FORALL({PartsPow, NodeCount}, {choose(4, 9), choose(4, 15)},
+                begin
                 Nval = 3,
                 TNval = Nval + 1,
                 _Params = [{target_n_val, TNval}],
@@ -815,7 +815,7 @@ prop_claim_ensures_unique_nodes_adding_groups(ChooseFun) ->
     %% around those case where we shrink to a non-minimal case because
     %% some intermediate combinations of ring_size/node have no violations
     ?FORALL({PartsPow, BaseNodes, AddedNodes},
-            {choose(4, 9), choose(2, 10), choose(2, 5)},%proper_gen:double_shrink({choose(4, 9), choose(2, 10), choose(2, 5)}),
+            {choose(4, 9), choose(2, 10), choose(2, 5)},
             begin
                 Nval = 3,
                 TNval = Nval + 1,
@@ -872,7 +872,7 @@ prop_claim_ensures_unique_nodes_adding_singly(ChooseFun) ->
     %% NOTE2: uses undocumented "double_shrink", is expensive, but should get
     %% around those case where we shrink to a non-minimal case because
     %% some intermediate combinations of ring_size/node have no violations
-    ?FORALL({PartsPow, NodeCount}, {choose(4, 9), choose(4, 15)},%proper:double_shrink({choose(4, 9), choose(4, 15)}),
+    ?FORALL({PartsPow, NodeCount}, {choose(4, 9), choose(4, 15)},
             begin
                 Nval = 3,
                 TNval = Nval + 1,

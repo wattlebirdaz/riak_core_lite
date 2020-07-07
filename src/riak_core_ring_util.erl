@@ -158,7 +158,7 @@ test_ids_are_boundaries() ->
     test_ids_are_boundaries(?TEST_TIME_SECS).
 %TODO check time sec
 test_ids_are_boundaries(_TestTimeSecs) ->
-        proper:quickcheck(?QC_OUT(prop_ids_are_boundaries()),[{numtests, 5000}]).
+        proper:quickcheck(?QC_OUT(prop_ids_are_boundaries()), [{numtests, 5000}]).
 
 reverse_test_() ->
     {timeout, ?TEST_TIME_SECS+5, [?_assert(test_reverse() =:= true)]}.
@@ -167,7 +167,7 @@ test_reverse() ->
     test_reverse(?TEST_TIME_SECS).
 %TODO check time sec
 test_reverse(_TestTimeSecs) ->
-        proper:quickcheck(prop_reverse(),[{numtests, 5000}]).
+        proper:quickcheck(prop_reverse(), [{numtests, 5000}]).
 
 
 monotonic_test_() ->
@@ -177,7 +177,7 @@ test_monotonic() ->
     test_monotonic(?TEST_TIME_SECS).
 
 test_monotonic(TestTimeSecs) ->
-        proper:quickcheck(?QC_OUT(prop_monotonic()),[{numtests, 5000}]).
+        proper:quickcheck(?QC_OUT(prop_monotonic()), [{numtests, 5000}]).
 
 
 %% `prop_only_boundaries' should run a little longer: not quite as
@@ -190,7 +190,7 @@ test_only_boundaries() ->
     test_only_boundaries(?TEST_TIME_SECS+10).
 
 test_only_boundaries(TestTimeSecs) ->
-        proper:quickcheck(prop_only_boundaries(),[{numtests, 5000}]).
+        proper:quickcheck(prop_only_boundaries(), [{numtests, 5000}]).
 
 %% Partition IDs should map to hash values which are partition boundaries
 prop_ids_are_boundaries() ->
