@@ -50,13 +50,13 @@ starting(S) ->
 
 planning(S) ->
     [{planning, {call, ?MODULE, add_node, add_node_args(S)}},
-     {planning, {call, ?MODULE, leave_node, leave_node_args(S)}},
-     {claiming, {call, ?MODULE, claim, claim_args(S)}} %TODO 
+     {planning, {call, ?MODULE, leave_node, leave_node_args(S)}}%,
+     %{claiming, {call, ?MODULE, claim, claim_args(S)}} %TODO 
     ].
 
 claiming(S) ->
     [{planning, {call, ?MODULE, add_node, add_node_args(S)}},
-     {planning, {call, ?MODULE, leave_node, leave_node_args(S)}}].
+     {planning, {call, ?MODULE, leave_node, leave_node_args(S)}}].+
 
 %% -- Operations -------------------------------------------------------------
 

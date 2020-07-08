@@ -59,14 +59,6 @@
          rotations/1,
          substitutions/2]).
 
--ifdef(TEST).
--ifdef(PROPER).
--include_lib("proper/include/proper.hrl").
-%-compile(export_all).
--endif.
--include_lib("eunit/include/eunit.hrl").
--endif.
-
 -record(load,    {node,    % Node name
                   num_pri, % Number of primaries
                   num_fb,  % Number of fallbacks
@@ -632,52 +624,4 @@ substitute(Names, Mapping, L) ->
 %% -------------------------------------------------------------------
 %% Unit Tests
 %% -------------------------------------------------------------------
-
--ifdef(TEST).
--ifdef(PROPER).
-
-property_adjacency_summary_test_() ->
-    {timeout, 120,
-    ?_test(proper:quickcheck(prop_adjacency_summary(), [{numtest, 5000}]))}.
-
-longer_list(K, G) ->
-    ?SIZED(Size, proper_types:resize(trunc(K*Size), list(proper_types:resize(Size, G)))).
-
-%% Compare directly constructing the adjacency matrix against
-%% one using prepend/fixup.
-prop_adjacency_summary() ->
-    ?FORALL({OwnersSeed, S},
-            {non_empty(longer_list(40, proper_types:largeint())),
-             ?LET(X, proper_types:int(), 1 + abs(X))},
-            begin
-        io:format("1\n"),
-                Owners = [list_to_atom("n" ++ integer_to_list(1 + (abs(I) rem S)))
-                            || I <- OwnersSeed],
-                AM = adjacency_matrix(Owners),
-                AS = summarize_am(AM),
-
-                {Owners2, _DAM2, FixDAM2} = build(Owners),
-                AS2 = summarize_am(dict:to_list(FixDAM2)),
-                io:format("2\n"),
-                ?WHENFAIL(
-                   begin
-                       io:format(user, "S=~p\nOwners =~p\n", [S, Owners]),
-                       io:format(user, "=== AM ===\n~p\n", [AM]),
-                       io:format(user, "=== FixAM2 ===\n~p\n", [dict:to_list(FixDAM2)]),
-                       io:format(user, "=== AS2 ===\n~p\n", [AS2])
-                   end,
-                   proper:conjunction([{owners, Owners == Owners2},
-                                {am2,    lists:sort(AS)== lists:sort(AS2)}]))
-            end).
-
-build(Owners) ->
-    build(lists:usort(Owners), lists:reverse(Owners), [], dict:new()).
-
-build(_M, [], Owners, DAM) ->
-    {Owners, DAM, fixup_dam(Owners, DAM)};
-build(M, [N|Rest], Owners, DAM) ->
-    {Owners1, DAM1} = prepend(M, N, Owners, DAM),
-    build(M, Rest, Owners1, DAM1).
-
--endif. % EQC
--endif. % TEST.
+%See test - pqc - riak_core_claim_util_qc
