@@ -56,7 +56,7 @@ planning(S) ->
 
 claiming(S) ->
     [{planning, {call, ?MODULE, add_node, add_node_args(S)}},
-     {planning, {call, ?MODULE, leave_node, leave_node_args(S)}}].+
+     {planning, {call, ?MODULE, leave_node, leave_node_args(S)}}].
 
 %% -- Operations -------------------------------------------------------------
 
