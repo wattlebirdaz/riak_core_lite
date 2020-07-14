@@ -17,8 +17,8 @@
 
 %Entry Eunit
 claim_test_()->
-    {timeout, 10000,
-        ?_assert(proper:quickcheck(prop_claim(with_ring_size(5)),[{numtests, 10000}] ))}.
+    {timeout, 120,
+        ?_assert(proper:quickcheck(prop_claim(with_ring_size(5)),[{numtests, 5000}] ))}.
 
 %% -- State ------------------------------------------------------------------
 -record(state,

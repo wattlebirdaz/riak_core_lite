@@ -60,8 +60,8 @@
 %%
 
 bprops_test_() -> 
-    {timeout, 10000,
-        ?_assert(proper:quickcheck(?QC_OUT(prop_buckets()), [{numtests, 10000}]))
+    {timeout,360,
+        ?_assert(proper:quickcheck(?QC_OUT(prop_buckets()), [{numtests, 5000}]))
     }.
 
 %%
@@ -86,20 +86,9 @@ cover(N) ->
     cover:analyse_to_file(riak_core_bucket, [html]).
 
 %%
-%TODO
 command(State) ->
     oneof([{call, ?MODULE, set_bucket, set_bucket_args(State)},
            {call, ?MODULE, get_bucket, get_bucket_args(State)}
-          %[{call, ?MODULE,append_bucket_defaults/1}] 
-          %[{call, ?MODULE,get_bucket/2}] ++
-          %[{call, ?MODULE,reset_bucket/1}] ++
-          %[{call, ?MODULE,get_buckets/1}] ++
-          %[{call, ?MODULE,bucket_nval_map/1}] ++
-          %[{call, ?MODULE,default_object_navl,[]}] ++
-          %[{call, ?MODULE,merge_props/2}] ++
-          %[{call, ?MODULE,name/1}] ++
-          %[{call, ?MODULE,nval/1}] ++
-          %[{call, ?MODULE,get_vault/2}]
     ]).
 
 %%
@@ -142,7 +131,7 @@ next_state(#state{buckets=Buckets} = S,_Res,{call,?MODULE, set_bucket, [Bucket, 
             Buckets
         )
     };
-next_state(S,_Res,{call,?MODULE, get_bucket, [Bucket]}) ->
+next_state(S,_Res,{call,?MODULE, get_bucket, [_Bucket]}) ->
     S.
 
 -spec expected_properties(bucket_name(), orddict(), orddict()) -> orddict().
@@ -165,7 +154,7 @@ get_bucket(Bucket) ->
 precondition(_S, {call, ?MODULE, _,_})->
     true.
 %get_bucket_post(#state{buckets=Buckets}, [Bucket], Res)
-postcondition(#state{buckets=Buckets},{call,?MODULE,get_bucket, [Bucket]}, Res) ->
+postcondition(#state{buckets=Buckets},{call, ?MODULE, get_bucket, [Bucket]}, Res) ->
     BPropsFind = orddict:find(Bucket, Buckets),
     case {Res, BPropsFind} of
         {error, _} ->
@@ -196,28 +185,6 @@ postcondition(#state{buckets=Buckets},{call,?MODULE, set_bucket, [Bucket, _BProp
         _ ->
             false
     end.
-
-%%
-%% all_n command %TODO
-%%
-
-% all_n_args(_) -> [].
-
-% all_n() ->
-%     {ok, Ring} = riak_core_ring_manager:get_my_ring(),
-%     riak_core_bucket:all_n(Ring).
-
-% all_n_post(#state{buckets=Buckets}, [], Res) ->
-% %postcondition(#state{buckets=Buckets}, {call,?MODULE,_,[]}, Res) ->
-%     AllNVals = orddict:fold(
-%         fun(_Bucket, BProps, Accum) ->
-%             {ok, NVal} = orddict:find(n_val, BProps),
-%             [NVal | Accum]
-%         end,
-%         [],
-%         Buckets
-%     ) ++ [proplists:get_value(n_val, ?DEFAULT_BPROPS)],
-%     equals(ordsets:from_list(Res), ordsets:from_list(AllNVals)).
 
 
 %% TODO Add more commands here
@@ -259,19 +226,15 @@ prop_buckets() ->
         aggregate(command_names(Cmds),
             ?TRAPEXIT(
                 begin
-                    {H, S, Res} =
+                    {_H, _S, Res} =
                     bucket_eqc_utils:per_test_setup(?DEFAULT_BPROPS,
                                                     fun() ->
                                                         run_commands(?MODULE, Cmds)
                                                     end),
-                    % pretty_commands(
-                    %     ?MODULE, Cmds,
-                    %     {H, S, Res},
                         aggregate(
                             command_names(Cmds),
                             Res == ok
                         )
-                    % )
                 end
             )
         )

@@ -38,11 +38,12 @@
         proper:on_output(fun(Str, Args) -> io:format(user, Str, Args) end, P)).
 
 -define(ORDSET(L), ordsets:from_list(L)).
+%TODO
+% qc_test_() ->
+%     {timeout, 1500,
+%       ?_assert(proper:quickcheck(?QC_OUT(prop_main()),[{numtests, 5000}]))
+%     }.
 
-qc_test_() ->
-    {timeout, 10000,
-      ?_assert(proper:quickcheck(prop_main(),[{numtests, 10000}]))
-    }.
 
 prop_main() ->
     ?SETUP(

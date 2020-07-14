@@ -23,16 +23,12 @@
 
 -include("stats.hrl").
 
--ifdef(TEST).
--include_lib("eunit/include/eunit.hrl").
--compile(export_all).
--endif.
 
 %% ===================================================================
 %% Unit Test Helpers
 %% ===================================================================
 
--ifdef(EUNIT).
+-ifdef(TEST).
 
 r_run(Input, Command) ->
     case r_port() of
