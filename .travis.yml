@@ -6,6 +6,7 @@ install:
   - make
   - ./rebar3 update
 script:
+  - make format
   - make test
   - make proper
   - make coverage
