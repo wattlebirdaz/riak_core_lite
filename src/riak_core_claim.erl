@@ -68,7 +68,6 @@
 	 claim_diagonal/3, wants/1, wants_owns_diff/2,
 	 meets_target_n/2, diagonal_stripe/2]).
 
-
 -define(DEF_TARGET_N, 4).
 
 claim(Ring) -> claim(Ring, want, choose).
@@ -754,4 +753,5 @@ has_violations(Diag) ->
     RS = length(Diag),
     NC = length(lists:usort(Diag)),
     Overhang = RS rem NC,
-    (Overhang > 0 andalso Overhang < 4). %% hardcoded target n of 4
+    Overhang > 0 andalso
+      Overhang < 4. %% hardcoded target n of 4

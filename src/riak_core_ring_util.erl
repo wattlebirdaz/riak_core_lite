@@ -26,6 +26,7 @@
 	 partition_id_to_hash/2, hash_is_partition_boundary/2]).
 
 -ifdef(TEST).
+
 -include_lib("eunit/include/eunit.hrl").
 
 -endif.
@@ -129,13 +130,27 @@ partition_test() ->
 
 %% Index values divisible by partition size are boundary values, others are not
 boundary_test() ->
-    BoundaryIndex = riak_core_ring_util:partition_id_to_hash(15, 32),
-    ?assert(riak_core_ring_util:hash_is_partition_boundary(<<BoundaryIndex:160>>, 32)),
-    ?assertNot(riak_core_ring_util:hash_is_partition_boundary(<<(BoundaryIndex + 32):160>>, 32)),
-    ?assertNot(riak_core_ring_util:hash_is_partition_boundary(<<(BoundaryIndex - 32):160>>, 32)),
-    ?assertNot(riak_core_ring_util:hash_is_partition_boundary(<<(BoundaryIndex + 1):160>>, 32)),
-    ?assertNot(riak_core_ring_util:hash_is_partition_boundary(<<(BoundaryIndex - 1):160>>, 32)),
-    ?assertNot(riak_core_ring_util:hash_is_partition_boundary(<<(BoundaryIndex + 2):160>>, 32)),
-    ?assertNot(riak_core_ring_util:hash_is_partition_boundary(<<(BoundaryIndex + 10):160>>, 32)).
+    BoundaryIndex =
+	riak_core_ring_util:partition_id_to_hash(15, 32),
+    ?assert((riak_core_ring_util:hash_is_partition_boundary(<<BoundaryIndex:160>>,
+							    32))),
+    ?assertNot((riak_core_ring_util:hash_is_partition_boundary(<<(BoundaryIndex
+								    + 32):160>>,
+							       32))),
+    ?assertNot((riak_core_ring_util:hash_is_partition_boundary(<<(BoundaryIndex
+								    - 32):160>>,
+							       32))),
+    ?assertNot((riak_core_ring_util:hash_is_partition_boundary(<<(BoundaryIndex
+								    + 1):160>>,
+							       32))),
+    ?assertNot((riak_core_ring_util:hash_is_partition_boundary(<<(BoundaryIndex
+								    - 1):160>>,
+							       32))),
+    ?assertNot((riak_core_ring_util:hash_is_partition_boundary(<<(BoundaryIndex
+								    + 2):160>>,
+							       32))),
+    ?assertNot((riak_core_ring_util:hash_is_partition_boundary(<<(BoundaryIndex
+								    + 10):160>>,
+							       32))).
 
 -endif. % TEST

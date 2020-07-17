@@ -46,15 +46,18 @@
 -include("riak_core_vnode.hrl").
 
 -ifdef(TEST).
+
 -ifdef(PROPER).
 
 -include_lib("proper/include/proper.hrl").
+
 %-compile(export_all).
 -endif.
+
 -include_lib("eunit/include/eunit.hrl").
--export([counter_loop/1,
-         incr_counter/1,
-         decr_counter/1]).
+
+-export([counter_loop/1, incr_counter/1,
+	 decr_counter/1]).
 
 -endif.
 
@@ -1134,7 +1137,7 @@ proxy_spawn_test() ->
 -ifdef(PROPER).
 
 count_test() ->
-    ?assert(proper:quickcheck(prop_count_correct())).
+    ?assert((proper:quickcheck(prop_count_correct()))).
 
 prop_count_correct() ->
     ?FORALL(List, (list(bool())),
@@ -1142,4 +1145,5 @@ prop_count_correct() ->
 	       length([E || E <- List, E]))).
 
 -endif. %% EQC
+
 -endif. %% TEST
