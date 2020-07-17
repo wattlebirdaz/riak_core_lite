@@ -755,3 +755,5 @@ has_violations(Diag) ->
     Overhang = RS rem NC,
     Overhang > 0 andalso
       Overhang < 4. %% hardcoded target n of 4
+
+-endif.
