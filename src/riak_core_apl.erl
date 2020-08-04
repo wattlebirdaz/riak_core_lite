@@ -28,7 +28,7 @@
 	 get_apl/4, get_apl_ann/2, get_apl_ann/3, get_apl_ann/4,
 	 get_apl_ann_with_pnum/1, get_primary_apl/3,
 	 get_primary_apl/4, get_primary_apl_chbin/4, first_up/2,
-	 offline_owners/1, offline_owners/2]).
+	 offline_owners/1, offline_owners/2, offline_owners/3]).
 
 -export_type([preflist/0, preflist_ann/0,
 	      preflist_with_pnum_ann/0]).
@@ -225,6 +225,13 @@ offline_owners(UpSet, CHBin) when is_list(UpSet) ->
 						 not is_up(Node, UpSet)
 					 end,
 					 CHBin),
+    DownVNodes.
+
+offline_owners(Service, CHBin, OtherDownNodes) ->
+    UpSet = ordsets:from_list(riak_core_node_watcher:nodes(Service)),
+    DownVNodes = chashbin:to_list_filter(fun({_Index, Node}) ->
+                                                 (not is_up(Node, UpSet) or lists:member(Node,OtherDownNodes))
+                                         end, CHBin),
     DownVNodes.
 
 %% @doc Split a preference list into up and down lists.
